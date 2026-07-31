@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Actividad práctica de Vue 3 + Vuex 4 con Composition API: sistema de préstamos de una biblioteca de barrio — Módulo 7, Lección 3.">
+<title>Actividad Práctica · La biblioteca del barrio — Vue 3 y Vuex 4</title>
+<style>
+  :root{
+    --bg:#f5f6f8;
+    --surface:#ffffff;
+    --surface-2:#eef1f4;
+    --ink:#181c22;
+    --ink-soft:#59646f;
+    --line:#dfe4e9;
+    --brand:#42b883;
+    --brand-ink:#0d2b1e;
+    --brand-dark:#2b8460;
+    --accent:#2c3e50;
+    --warn:#d98a1f;
+    --warn-bg:#fdf6e8;
+    --danger:#c0392b;
+    --code-bg:#1e2430;
+    --code-ink:#e6edf3;
+    --radius:14px;
+    --shadow:0 1px 3px rgba(16,24,32,.06), 0 8px 24px rgba(16,24,32,.05);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#12161b;
+      --surface:#1a2027;
+      --surface-2:#222a33;
+      --ink:#e8edf2;
+      --ink-soft:#9aa7b4;
+      --line:#2b343e;
+      --accent:#8fd8b6;
+      --brand-dark:#5fd39f;
+      --warn:#e8b45c;
+      --warn-bg:#2b2416;
+      --danger:#f08b7f;
+      --shadow:0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{max-width:900px;margin:0 auto;padding:0 1.5rem;}
+
+  /* ---------- HERO ---------- */
+  header.hero{
+    background:linear-gradient(140deg,#1f2d3d 0%,#16212c 55%,#123a3f 100%);
+    color:#f2f6f9;padding:3.5rem 0 3rem;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .kicker{
+    display:inline-flex;align-items:center;gap:.5rem;
+    background:rgba(66,184,131,.16);color:#7de3b3;
+    border:1px solid rgba(66,184,131,.35);
+    font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    padding:.35rem .85rem;border-radius:999px;margin-bottom:1.25rem;
+  }
+  header.hero h1{margin:0 0 .75rem;font-size:clamp(1.75rem,4.5vw,2.6rem);line-height:1.15;letter-spacing:-.02em;}
+  header.hero .lead{margin:0;color:#b6c6d3;max-width:62ch;font-size:1.05rem;}
+
+  .hero-facts{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:2rem;}
+  .fact{
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+    border-radius:10px;padding:.6rem 1rem;font-size:.85rem;color:#cfdbe5;
+  }
+  .fact strong{display:block;color:#fff;font-size:1rem;}
+
+  /* ---------- BLOQUES ---------- */
+  main{padding:3rem 0 6rem;}
+  section.bloque{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:2rem;margin-bottom:1.75rem;
+  }
+  .bloque__head{
+    display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;
+    margin:0 0 1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--line);
+  }
+  .num{
+    flex:0 0 auto;width:2.25rem;height:2.25rem;border-radius:8px;
+    background:var(--brand);color:var(--brand-ink);
+    display:grid;place-items:center;font-weight:800;font-size:1rem;
+  }
+  .bloque__head h2{margin:0;font-size:1.3rem;line-height:1.3;flex:1 1 240px;letter-spacing:-.01em;}
+  .tag{
+    font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--brand-dark);background:rgba(66,184,131,.12);
+    border:1px solid rgba(66,184,131,.3);
+    padding:.25rem .6rem;border-radius:999px;white-space:nowrap;
+  }
+
+  h3{margin:1.75rem 0 .5rem;font-size:1rem;color:var(--accent);letter-spacing:.01em;}
+  h3:first-of-type{margin-top:0;}
+
+  p{margin:0 0 1rem;}
+  ul,ol{margin:0 0 1rem;padding-left:1.4rem;}
+  li{margin-bottom:.55rem;}
+  li::marker{color:var(--brand-dark);}
+
+  code{
+    background:var(--surface-2);padding:.12rem .4rem;border-radius:5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:.86em;border:1px solid var(--line);
+  }
+
+  /* ---------- CALLOUTS ---------- */
+  .callout{border-left:4px solid var(--brand);background:rgba(66,184,131,.07);padding:1rem 1.25rem;border-radius:0 10px 10px 0;margin:1.25rem 0;}
+  .callout--ojo{border-left-color:var(--warn);background:var(--warn-bg);}
+  .callout--stop{border-left-color:var(--danger);background:rgba(192,57,43,.07);}
+  .callout p:last-child{margin-bottom:0;}
+  .callout strong:first-child{display:inline-block;margin-bottom:.25rem;}
+
+  /* ---------- PISTAS ---------- */
+  details.pista{
+    border:1px dashed var(--line);border-radius:10px;
+    padding:.85rem 1.1rem;margin:1rem 0 0;background:var(--surface-2);
+  }
+  details.pista[open]{border-style:solid;border-color:var(--brand);}
+  details.pista summary{cursor:pointer;font-weight:700;font-size:.9rem;color:var(--brand-dark);list-style:none;user-select:none;}
+  details.pista summary::-webkit-details-marker{display:none;}
+  details.pista summary::before{content:"💡 ";}
+  details.pista summary:hover{text-decoration:underline;}
+  details.pista > *:not(summary){margin-top:.85rem;font-size:.92rem;color:var(--ink-soft);}
+  details.pista ul{margin-bottom:0;}
+
+  /* ---------- TABLA ---------- */
+  .tabla-scroll{overflow-x:auto;margin:1rem 0;-webkit-overflow-scrolling:touch;}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:520px;}
+  th,td{text-align:left;padding:.7rem .85rem;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{background:var(--surface-2);font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:none;}
+
+  /* ---------- NAV ---------- */
+  nav.indice{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.5rem;margin-bottom:2.5rem;box-shadow:var(--shadow);
+  }
+  nav.indice h2{margin:0 0 1rem;font-size:.82rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);}
+  nav.indice ol{margin:0;padding-left:1.3rem;columns:2;column-gap:2rem;}
+  nav.indice li{margin-bottom:.45rem;break-inside:avoid;}
+  nav.indice a{color:var(--accent);text-decoration:none;font-weight:600;font-size:.93rem;}
+  nav.indice a:hover{color:var(--brand-dark);text-decoration:underline;}
+  @media (max-width:600px){nav.indice ol{columns:1;}}
+
+  footer{border-top:1px solid var(--line);padding:2rem 0;text-align:center;color:var(--ink-soft);font-size:.85rem;}
+
+  a{color:var(--brand-dark);}
+  :focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:4px;}
+
+  @media (max-width:640px){
+    section.bloque{padding:1.5rem 1.15rem;}
+    .wrap{padding:0 1rem;}
+    header.hero{padding:2.5rem 0 2rem;}
+  }
+
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="kicker">Módulo 7 · Lección 3 · Actividad práctica</span>
+    <h1>La biblioteca del barrio</h1>
+    <p class="lead">
+      Construye el sistema de préstamos de una biblioteca comunitaria con Vue 3 y Vuex 4:
+      catálogo compartido, préstamos por socio, control de ejemplares y reglas de negocio que
+      ningún componente puede saltarse. Todo el estado en un solo lugar, y con las reglas puestas.
+    </p>
+
+    <div class="hero-facts">
+      <div class="fact"><strong>6 bloques</strong>en orden, a tu ritmo</div>
+      <div class="fact"><strong>Vue 3 + Vuex 4</strong>Composition API</div>
+      <div class="fact"><strong>Individual</strong>o en parejas</div>
+      <div class="fact"><strong>Sin backend</strong>API simulada en el front</div>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <div class="callout">
+    <strong>Seis bloques. Y tres de ellos te van a salir mal a propósito.</strong>
+    <p>
+      Esta actividad no te pide "usar Vuex". Te pide entender <strong>por qué existe cada regla</strong>.
+      Por eso hay tres momentos donde te voy a pedir explícitamente que hagas las cosas de la forma
+      obvia, veas cómo se rompen, y recién entonces las arregles. Si te saltas esa parte y vas directo
+      a la solución correcta, aprobaste el ejercicio y perdiste la clase.
+    </p>
+  </div>
+
+  <nav class="indice">
+    <h2>Ruta de trabajo</h2>
+    <ol>
+      <li><a href="#contexto">El encargo</a></li>
+      <li><a href="#datos">Tu store</a></li>
+      <li><a href="#b1">El catálogo en pantalla</a></li>
+      <li><a href="#b2">Prestar y devolver</a></li>
+      <li><a href="#b3">El carnet del socio</a></li>
+      <li><a href="#b4">Los datos vienen de afuera</a></li>
+      <li><a href="#b5">Que sobreviva al F5</a></li>
+      <li><a href="#b6">El doble clic que presta dos libros</a></li>
+      <li><a href="#extra">Si terminas antes</a></li>
+    </ol>
+  </nav>
+
+<!-- ============ CONTEXTO ============ -->
+<section class="bloque" id="contexto">
+  <div class="bloque__head">
+    <span class="num">📚</span>
+    <h2>El encargo</h2>
+    <span class="tag">Contexto</span>
+  </div>
+
+  <p>
+    Una biblioteca comunitaria lleva sus préstamos en un cuaderno de tapa dura. Cuando alguien
+    pide un libro, la encargada anota el nombre, la fecha y el título. Cuando lo devuelven, tacha
+    la línea. Para saber si queda algún ejemplar de <em>Cien años de soledad</em>, hay que ir
+    hasta el estante a mirar.
+  </p>
+
+  <p>
+    El problema no es el cuaderno. El problema es que <strong>la misma información está en tres
+    lugares distintos</strong>: el cuaderno dice quién tiene qué, el estante dice cuántos quedan,
+    y la memoria de la encargada dice quién ya pasó de tres libros. Y las tres versiones se
+    contradicen entre sí como una vez por semana.
+  </p>
+
+  <p>Te piden construir el <strong>panel de préstamos</strong>. Tiene que resolver cinco cosas:</p>
+
+  <ol>
+    <li>Ver el catálogo completo con los ejemplares disponibles de cada título</li>
+    <li>Prestar un libro a un socio, si es que puede</li>
+    <li>Registrar la devolución</li>
+    <li>Ver en todo momento qué tiene prestado el socio y cuánto le queda de cupo</li>
+    <li>Que nada de eso se contradiga entre pantallas, nunca</li>
+  </ol>
+
+  <div class="callout callout--stop">
+    <strong>Fíjate en el punto 5, porque es el único que importa de verdad.</strong>
+    <p>
+      Los primeros cuatro los podrías hacer con <code>ref</code> y props en un par de horas.
+      El quinto es el que te obliga a Vuex. Porque el número de ejemplares disponibles lo
+      necesitan <strong>la tarjeta del libro, el buscador, el panel de préstamos y el contador
+      del encabezado</strong> — cuatro componentes que no son padre e hijo entre sí.
+    </p>
+    <p>
+      Cada vez que dudes si algo va al store, vuelve a esta pregunta:
+      <strong>¿cuántos componentes necesitan este dato, y están emparentados?</strong>
+      Esa es toda la teoría que necesitas para decidir.
+    </p>
+  </div>
+
+  <div class="callout callout--ojo">
+    <strong>Cómo usar esta guía.</strong>
+    <p>
+      Son seis bloques. Trabájalos <strong>en orden</strong> y no pases al siguiente hasta que el
+      anterior funcione. <strong>Aquí no hay código para copiar, y es a propósito.</strong>
+      Cada bloque tiene una <em>pista</em> plegada al final — ábrela solo cuando lleves un rato
+      realmente atascado. Si la abres al minuto tres, te estás robando a ti mismo.
+    </p>
+  </div>
+
+  <div class="callout callout--stop">
+    <strong>Esto no es el POS de la guía con otro nombre.</strong>
+    <p>
+      Comparte la arquitectura, pero acá aparecen cosas que en la guía no salieron: un cupo por
+      socio que ningún componente puede saltarse, un dato derivado que te va a dar ganas de guardar
+      en el state, y un botón que presta dos libros de un solo clic si lo resuelves de la forma
+      obvia. Copiar el código de la clase tal cual <strong>no te va a alcanzar</strong>.
+    </p>
+  </div>
+</section>
+
+<!-- ============ DATOS / STORE ============ -->
+<section class="bloque" id="datos">
+  <div class="bloque__head">
+    <span class="num">🗄️</span>
+    <h2>Tu store</h2>
+    <span class="tag">Infraestructura</span>
+  </div>
+
+  <h3>Antes de escribir una línea de componente</h3>
+  <ol>
+    <li>Proyecto Vue 3 creado con Vue Router incluido.</li>
+    <li>Vuex <strong>versión 4</strong> instalado. Verifica la versión: la 3 es de Vue 2 y no funciona acá.</li>
+    <li>El store registrado como plugin antes de montar la app.</li>
+    <li>El modo estricto activado <strong>solo en desarrollo</strong>. Sí, desde el minuto uno. Lo vas a agradecer.</li>
+    <li>La extensión Vue Devtools instalada en tu navegador. No es opcional en esta actividad.</li>
+  </ol>
+
+  <div class="callout callout--ojo">
+    <strong>El modo estricto es el profesor que no se cansa.</strong>
+    <p>
+      Si lo activas ahora, cada vez que modifiques el estado desde donde no corresponde, la consola
+      te lo va a decir con el archivo y la línea exactos. Si lo dejas para el final, vas a tener
+      quince violaciones acumuladas y no vas a saber cuál rompió qué.
+    </p>
+    <p>
+      Y ojo con el detalle: se activa <strong>solo en desarrollo</strong>, porque revisa el árbol
+      completo del estado en cada cambio y eso cuesta. Averigua qué variable de tu bundler te dice
+      si estás en desarrollo o en producción.
+    </p>
+  </div>
+
+  <h3>Los tres módulos que vas a construir</h3>
+  <div class="tabla-scroll">
+  <table>
+    <thead><tr><th>Módulo</th><th>De qué es responsable</th><th>Qué NO le corresponde</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>catalogo</code></td>
+        <td>Los títulos, cuántos ejemplares hay de cada uno y cuántos están disponibles</td>
+        <td>Saber quién los tiene</td>
+      </tr>
+      <tr>
+        <td><code>prestamos</code></td>
+        <td>Los préstamos vigentes: qué libro, para quién, desde cuándo</td>
+        <td>Saber cuántos ejemplares existen en total</td>
+      </tr>
+      <tr>
+        <td><code>socio</code></td>
+        <td>Quién está usando el sistema y su cupo máximo</td>
+        <td>Saber qué libros pidió</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout callout--stop">
+    <strong>Lee la tercera columna otra vez. Es la parte difícil del diseño.</strong>
+    <p>
+      Un módulo <strong>no</strong> es una carpeta donde tirar cosas relacionadas: es un
+      <em>dominio con responsabilidad acotada</em>. Cuando el módulo de préstamos necesite saber
+      cuántos ejemplares quedan, no va a guardar una copia del número — se lo va a <strong>preguntar
+      al catálogo</strong>. Averigua con qué herramienta un módulo consulta el estado de otro sin
+      duplicarlo, y con cuál le pide que haga algo.
+    </p>
+    <p>
+      Si terminas con el mismo dato guardado en dos módulos, ya reprodujiste el problema del
+      cuaderno y el estante. Que es, literalmente, el problema que te contrataron para resolver.
+    </p>
+  </div>
+
+  <h3>Forma de un libro del catálogo</h3>
+  <div class="tabla-scroll">
+  <table>
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>Texto</td><td>Único. Lo vas a usar en absolutamente todas las operaciones</td></tr>
+      <tr><td><code>titulo</code></td><td>Texto</td><td>Obligatorio</td></tr>
+      <tr><td><code>autor</code></td><td>Texto</td><td>Obligatorio</td></tr>
+      <tr><td><code>genero</code></td><td>Texto</td><td>Solo acepta: <code>novela</code>, <code>ensayo</code>, <code>poesia</code> o <code>infantil</code></td></tr>
+      <tr><td><code>ejemplares</code></td><td><strong>Número</strong></td><td>Cuántos tiene la biblioteca en total. No cambia con los préstamos</td></tr>
+      <tr><td><code>disponibles</code></td><td><strong>Número</strong></td><td>Cuántos están en el estante ahora. Baja al prestar, sube al devolver</td></tr>
+      <tr><td><code>anio</code></td><td>Número</td><td>Año de edición</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout callout--ojo">
+    <strong>¿Por qué <code>disponibles</code> sí puede vivir en el state y el "total prestado" no?</strong>
+    <p>
+      Buena pregunta, y la vas a tener que responder en el bloque 3. Adelanto el criterio:
+      <code>disponibles</code> es un dato que <strong>el catálogo posee</strong> — mañana la
+      biblioteca podría perder un ejemplar, o donar otro, sin que nadie devuelva nada.
+      En cambio "cuántos libros tiene prestados el socio" se puede <strong>calcular</strong>
+      contando la lista de préstamos. Uno es un hecho, el otro es una consecuencia.
+    </p>
+    <p>
+      Los hechos se guardan. Las consecuencias se calculan. <strong>Guardar una consecuencia es
+      firmar el contrato de mantenerla sincronizada a mano para siempre</strong>, y ese contrato
+      siempre se incumple.
+    </p>
+  </div>
+
+  <h3>Datos iniciales</h3>
+  <p>
+    Arma un archivo con ocho o diez libros inventados, respetando los tipos de la tabla.
+    Ponle a un par de ellos <code>disponibles: 0</code> desde el inicio: vas a necesitar probar
+    qué pasa cuando un libro está agotado, y no quieres tener que prestar seis veces para llegar ahí.
+  </p>
+
+  <div class="callout callout--stop">
+    <strong>Devtools abierto todo el rato. En serio.</strong>
+    <p>
+      Ten siempre <strong>tu app</strong> y la <strong>pestaña Vuex de Devtools</strong> lado a lado.
+      Cuando dispares una operación, quiero que veas la mutation aparecer en la lista con su nombre
+      y su payload. Esa retroalimentación es la mitad del aprendizaje de esta actividad: el estado
+      deja de ser algo que imaginas y pasa a ser algo que ves moverse.
+    </p>
+    <p>
+      Si en algún momento tu app cambia y en Devtools <strong>no aparece nada</strong>, no celebres:
+      acabas de encontrar un bug. Alguien está mutando el estado por la puerta de atrás.
+    </p>
+  </div>
+</section>
+
+<!-- ============ BLOQUE 1 ============ -->
+<section class="bloque" id="b1">
+  <div class="bloque__head">
+    <span class="num">1</span>
+    <h2>El catálogo en pantalla</h2>
+    <span class="tag">State · Getters</span>
+  </div>
+
+  <h3>Lo que debe hacer tu aplicación</h3>
+  <ul>
+    <li>Mostrar todos los libros del catálogo al cargar la página, ordenados por título.</li>
+    <li>Cada libro se ve como una tarjeta con título, autor, género, año y cuántos ejemplares quedan disponibles de cuántos totales.</li>
+    <li>Un libro sin ejemplares disponibles debe distinguirse claramente del resto, a simple vista.</li>
+    <li>En el encabezado, siempre visible: cuántos títulos hay en el catálogo y cuántos tienen al menos un ejemplar disponible.</li>
+    <li>Ese encabezado <strong>no</strong> es hijo de la lista de libros. Está en otra parte del árbol de componentes. Resuélvelo igual.</li>
+    <li>La tarjeta de un libro es un componente <strong>presentacional</strong>: recibe el libro por props y no sabe que Vuex existe.</li>
+  </ul>
+
+  <h3>Rómpelo a propósito — parte 1 de 3</h3>
+  <p>
+    Antes de que funcione bien, quiero que lo hagas mal. Es rápido y es la lección más importante
+    del bloque.
+  </p>
+  <ol>
+    <li>En el componente que muestra la lista, obtén el store y saca los libros del estado
+        <strong>desestructurando o asignándolos a una constante normal</strong>, sin envolver nada.</li>
+    <li>Renderiza la lista. Vas a ver los libros. Todo parece perfecto.</li>
+    <li>Ahora, desde la consola del navegador o desde Devtools, dispara una mutation que cambie
+        el catálogo — por ejemplo, que reemplace la lista completa.</li>
+    <li>Mira la pantalla.</li>
+  </ol>
+
+  <div class="callout callout--ojo">
+    <strong>Nada se movió. Y el estado sí cambió.</strong>
+    <p>
+      Devtools te confirma que el estado es otro. Tu pantalla muestra el de antes. No hay error en
+      consola, no hay advertencia, no hay nada: <strong>simplemente se quedó congelada</strong>.
+      Este es el bug más difícil de encontrar de todos los que vas a ver hoy, justamente porque
+      no se queja.
+    </p>
+    <p>
+      La causa: leíste el valor <em>una vez</em> y te quedaste con una foto. Vue no tiene forma de
+      saber que a ti te interesaba enterarte de los cambios. Averigua qué función de Vue se usa
+      para declarar "esto depende del estado, recalcúlalo cuando cambie", y por qué con arreglos a
+      veces <em>parece</em> que funciona igual — ese "a veces" es peor que fallar siempre.
+    </p>
+  </div>
+
+  <h3>Ahora arréglalo</h3>
+  <p>
+    Corrige la lectura para que sea reactiva y repite el experimento. La lista tiene que cambiar
+    sola. Deja el arreglo puesto: es la forma correcta y la vas a usar en los cinco bloques que quedan.
+  </p>
+
+  <h3>Lo que se te va a evaluar</h3>
+  <ul>
+    <li>Que el contador del encabezado y la lista muestren <strong>siempre</strong> lo mismo, sin que hayas escrito una sola prop para conectarlos.</li>
+    <li>Que "cuántos títulos tienen ejemplares disponibles" sea un <em>getter</em> y no un cálculo repetido en cada componente que lo necesita.</li>
+    <li>Que la tarjeta del libro no importe Vuex, y sepas mostrar por qué eso la hace reutilizable.</li>
+    <li>Que puedas explicar qué viste cuando la vista se quedó congelada, y por qué pasó.</li>
+    <li>Que la consola del navegador esté limpia.</li>
+  </ul>
+
+  <details class="pista">
+    <summary>Pista — leer el estado sin que se congele</summary>
+    <ul>
+      <li>Para obtener el store dentro de un componente con <code>&lt;script setup&gt;</code> hay una función que te lo entrega. Solo funciona en el cuerpo de <code>setup</code>: si la llamas dentro de un <code>setTimeout</code> o de un manejador de eventos, te devuelve nada.</li>
+      <li>Toda lectura del estado que vaya al template tiene que ir envuelta en la función de Vue que crea valores calculados. Esa envoltura es lo que le dice a Vue "vuelve a ejecutar esto cuando cambie lo de adentro".</li>
+      <li>Los cálculos que sirven a más de un componente <strong>no van en el componente</strong>. Van en el store, en la sección de lecturas derivadas. Ahí se escriben una vez y además se cachean.</li>
+      <li>Para acceder a una lectura derivada que vive dentro de un módulo con espacio de nombres, la llave incluye el nombre del módulo y una barra. Como la llave lleva una barra, no la puedes escribir con punto: revisa cómo se accede a propiedades cuyo nombre tiene caracteres especiales.</li>
+      <li>Para el contador del encabezado no inventes nada nuevo: es el mismo getter leído desde otro componente. Ese es exactamente el problema que Vuex vino a resolver, así que disfrútalo.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ BLOQUE 2 ============ -->
+<section class="bloque" id="b2">
+  <div class="bloque__head">
+    <span class="num">2</span>
+    <h2>Prestar y devolver</h2>
+    <span class="tag">Mutations · Actions</span>
+  </div>
+
+  <h3>Lo que debe hacer tu aplicación</h3>
+  <ul>
+    <li>Cada tarjeta con ejemplares disponibles tiene un botón para prestar el libro al socio actual.</li>
+    <li>Al prestar: baja en uno los ejemplares disponibles de ese título <strong>y</strong> se crea un préstamo con el id del libro, el nombre del socio y la fecha.</li>
+    <li>Un panel aparte muestra los préstamos vigentes, cada uno con un botón para devolver.</li>
+    <li>Al devolver: desaparece el préstamo <strong>y</strong> sube en uno los ejemplares disponibles del título.</li>
+    <li>Si el libro no tiene ejemplares, el botón está deshabilitado y la tarjeta lo dice.</li>
+    <li>Un socio no puede tener más de <strong>tres libros</strong> prestados a la vez. Al llegar al tope, todos los botones de prestar se deshabilitan y aparece un mensaje que explica por qué.</li>
+    <li>Un socio no puede pedir dos veces el mismo título. Si ya lo tiene, ese botón queda fuera.</li>
+  </ul>
+
+  <div class="callout callout--stop">
+    <strong>Las tres reglas de negocio de este bloque no van en el componente. Ninguna.</strong>
+    <p>
+      "¿Hay ejemplares?", "¿le queda cupo?" y "¿ya tiene este título?" son decisiones del negocio,
+      no de la pantalla. Si las escribes en el <code>@click</code>, el día que agregues una segunda
+      pantalla que también preste — el buscador, la vista de detalle, un atajo de teclado — vas a
+      tener las mismas tres reglas copiadas en tres lugares. Y una se va a quedar atrás.
+    </p>
+    <p>
+      El componente solo tiene derecho a decir <strong>"el usuario quiere prestar este libro"</strong>.
+      Quién decide si se puede es otra capa. Averigua cuál, y por qué esa capa además puede consultar
+      el estado de <em>otro</em> módulo antes de decidir.
+    </p>
+  </div>
+
+  <div class="callout callout--ojo">
+    <strong>Una operación, dos módulos, y ningún dato duplicado.</strong>
+    <p>
+      Prestar toca dos módulos: baja un ejemplar en <code>catalogo</code> y agrega un registro en
+      <code>prestamos</code>. Van a ser <strong>dos escrituras distintas</strong>, coordinadas desde
+      un solo lugar. Averigua cómo se le pide a un módulo que ejecute algo cuando estás parado en otro
+      — hay un argumento extra que tienes que pasar y que casi todo el mundo olvida la primera vez.
+    </p>
+    <p>
+      Cuando lo tengas funcionando, mira Devtools: vas a ver las dos escrituras, en orden, con sus
+      nombres. Ese registro es lo que te va a salvar cuando algún día un ejemplar desaparezca sin
+      que nadie sepa por qué.
+    </p>
+  </div>
+
+  <h3>La prueba de este bloque</h3>
+  <ol>
+    <li>Presta tres libros distintos. Al tercero, todos los botones de prestar deben apagarse.</li>
+    <li>Devuelve uno. Los botones vuelven a habilitarse, y los ejemplares de ese título subieron.</li>
+    <li>Presta un libro que tenga un solo ejemplar. Su tarjeta debe pasar a "no disponible" inmediatamente.</li>
+    <li>Devuélvelo y comprueba que vuelve a estar disponible con el número correcto.</li>
+    <li>Presta y devuelve el mismo libro diez veces seguidas. Al final, los ejemplares disponibles tienen que ser <strong>exactamente</strong> los del inicio. Si sobran o faltan, tienes un bug de contabilidad.</li>
+  </ol>
+
+  <div class="callout callout--ojo">
+    <strong>Ese punto 5 es más traicionero de lo que parece.</strong>
+    <p>
+      Si al devolver no encuentras el préstamo correcto, o si sumas el ejemplar antes de comprobar
+      que el préstamo existía, el número se te va a desbalancear de a poco. Y como se va desviando
+      lentamente, nadie lo nota hasta que un libro tiene "4 disponibles de 3". Prueba el ciclo
+      completo diez veces antes de dar el bloque por terminado.
+    </p>
+  </div>
+
+  <h3>Lo que se te va a evaluar</h3>
+  <ul>
+    <li>Que las tres reglas de negocio estén en una sola capa y puedas señalar el archivo exacto.</li>
+    <li>Que el componente no sepa <em>por qué</em> no se puede prestar: solo pregunta si se puede.</li>
+    <li>Que la operación entre módulos esté hecha con la herramienta correcta y no duplicando el dato.</li>
+    <li>Que el ciclo de diez préstamos y diez devoluciones cierre con los números exactos.</li>
+    <li>Que en Devtools se vean las escrituras con nombres que se entiendan sin leer el código.</li>
+  </ul>
+
+  <details class="pista">
+    <summary>Pista — coordinar dos módulos sin duplicar nada</summary>
+    <ul>
+      <li>La capa que valida y coordina recibe un objeto con varias herramientas. Además de las que ya conoces, trae dos que apuntan a la raíz del store: una para leer el estado de otros módulos y otra para leer sus lecturas derivadas. Con esas averiguas cuántos ejemplares quedan sin guardar una copia.</li>
+      <li>Para escribir en otro módulo, la llave lleva el nombre del módulo y una barra, y hay que agregar un tercer argumento — un objeto de opciones con una bandera que significa "esta llave es absoluta, no relativa a mi módulo". Sin esa bandera te va a decir que la operación no existe, aunque la estés viendo escrita.</li>
+      <li>El cupo de tres no es un número suelto en el código: es una propiedad del socio. Ponlo en su módulo. El día que existan socios con cupo distinto, no vas a tener que buscar el número mágico entre los archivos.</li>
+      <li>"¿Le queda cupo?" y "¿ya tiene este título?" son lecturas derivadas, no cálculos dentro del botón. El componente solo pregunta y obedece.</li>
+      <li>Para quitar un elemento de una lista en el estado, busca su posición y usa el método de arreglos que elimina en el lugar. Filtrar y reasignar también sirve, pero piensa qué le muestra cada opción a Devtools.</li>
+      <li>La fecha del préstamo es un dato impredecible. Piensa dónde se calcula: si la generas dentro de la escritura, esa escritura deja de ser reproducible y el viaje en el tiempo de Devtools deja de tener sentido.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ BLOQUE 3 ============ -->
+<section class="bloque" id="b3">
+  <div class="bloque__head">
+    <span class="num">3</span>
+    <h2>El carnet del socio</h2>
+    <span class="tag">Getters · Formularios</span>
+  </div>
+
+  <h3>Lo que debe hacer tu aplicación</h3>
+  <ul>
+    <li>Un panel fijo que muestre: nombre del socio, cuántos libros tiene prestados, cuántos le quedan de cupo y la lista de títulos que lleva.</li>
+    <li>Un formulario para editar los datos del socio: nombre, correo y comuna.</li>
+    <li>Validación antes de guardar: nombre con mínimo 3 caracteres, correo con formato válido, comuna seleccionada de una lista. Cada error se muestra <strong>debajo de su campo</strong>.</li>
+    <li>Mientras el socio escribe su nombre, el panel del carnet lo va reflejando <strong>en vivo</strong>, letra por letra.</li>
+    <li>Un buscador que filtre el catálogo por título o autor, y un selector de género.</li>
+    <li>Cuando el filtro no encuentra nada, el mensaje debe ser distinto al de "el catálogo está vacío". No son lo mismo y el usuario merece saber cuál de las dos le pasó.</li>
+  </ul>
+
+  <h3>Rómpelo a propósito — parte 2 de 3</h3>
+  <p>
+    Vas a implementar "cuántos libros tiene prestados" de la forma más natural del mundo, que es
+    también la equivocada.
+  </p>
+  <ol>
+    <li>Agrega al módulo del socio un campo numérico <code>totalPrestados</code>, con valor inicial cero.</li>
+    <li>En la operación de prestar, súmale uno. En la de devolver, réstale uno. Muy razonable.</li>
+    <li>Úsalo en el panel del carnet. Presta y devuelve un par de libros: funciona perfecto.</li>
+    <li>Ahora agrega una operación nueva: un botón de <strong>"devolver todo"</strong> que vacíe la
+        lista de préstamos de un tirón y regrese los ejemplares al catálogo.</li>
+    <li>Impleméntalo pensando en los préstamos y en el catálogo… y aprieta el botón.</li>
+  </ol>
+
+  <div class="callout callout--ojo">
+    <strong>El carnet dice que tienes 3 libros. La lista está vacía.</strong>
+    <p>
+      Y las dos cosas vienen del mismo store. Lo que acaba de pasar es que tienes
+      <strong>dos fuentes de verdad para el mismo hecho</strong>: la lista de préstamos y un número
+      que dice cuántos hay. Cada operación nueva que escribas tiene que acordarse de actualizar las
+      dos. Esta se te olvidó, y es la primera que escribiste después de crear el campo.
+    </p>
+    <p>
+      No fue distracción. Es <strong>estructural</strong>: mientras el número exista como dato
+      independiente, cada operación futura es una oportunidad de desincronizarlo. Con tres
+      operaciones ya se te escapó una. Imagina con treinta.
+    </p>
+  </div>
+
+  <h3>Ahora arréglalo</h3>
+  <p>
+    Borra <code>totalPrestados</code> del estado. Bórralo de verdad, no lo comentes. Ese número
+    tiene que <strong>calcularse</strong> a partir de la lista de préstamos, en el lugar del store
+    destinado a las lecturas derivadas. Haz lo mismo con "cuánto cupo le queda", que es otra
+    consecuencia disfrazada de dato.
+  </p>
+  <p>
+    Vuelve a apretar "devolver todo". Ahora cuadra, y va a seguir cuadrando con todas las
+    operaciones que agregues de aquí en adelante — <strong>sin que tengas que acordarte de nada</strong>.
+    Ese es el premio.
+  </p>
+
+  <div class="callout callout--stop">
+    <strong>El formulario tiene su propia trampa, y es distinta.</strong>
+    <p>
+      Vas a querer atar los campos del formulario directamente a las propiedades del estado con la
+      directiva de doble enlace. Hazlo. Con el modo estricto activado, la consola te va a gritar
+      apenas escribas la primera letra.
+    </p>
+    <p>
+      El motivo: esa directiva <em>escribe</em> sobre lo que le des, y el estado del store no se
+      escribe desde la vista. Nunca. Averigua cómo se le da a esa directiva algo que
+      <strong>parezca</strong> una variable normal pero que por dentro, al recibir un valor, dispare
+      la escritura por el camino correcto. La respuesta es una variante de la misma función que
+      usaste en el bloque 1 para leer: resulta que además de leer, puede escribir.
+    </p>
+  </div>
+
+  <div class="callout callout--ojo">
+    <strong>Y una pregunta de diseño que sí tienes que responder: ¿el buscador va al store?</strong>
+    <p>
+      El nombre del socio va al store — lo necesitan el carnet, el encabezado y cada préstamo que
+      se cree. Pero <strong>el texto que escribiste en el buscador ¿quién más lo necesita?</strong>
+      Piénsalo antes de escribir la línea. Si la respuesta es "nadie", ese dato no tiene por qué
+      estar en un almacén global: te obliga a una escritura registrada en Devtools por cada tecla
+      presionada, y ensucia el historial que tanto nos costó tener limpio.
+    </p>
+    <p>
+      Toma la decisión, impleméntala, y prepárate para defenderla. <strong>No hay una sola respuesta
+      correcta</strong>: hay respuestas justificadas y respuestas automáticas. Se evalúa el criterio,
+      no la elección.
+    </p>
+  </div>
+
+  <h3>Lo que se te va a evaluar</h3>
+  <ul>
+    <li>Que <code>totalPrestados</code> ya no exista como dato guardado, y sepas explicar con tus palabras por qué se desincronizó.</li>
+    <li>Que el cupo restante también sea derivado.</li>
+    <li>Que "devolver todo" funcione sin que hayas tenido que acordarte de actualizar ningún contador.</li>
+    <li>Que el formulario escriba en el store por el camino correcto y no dispare ni una advertencia del modo estricto.</li>
+    <li>Que hayas decidido dónde vive el texto del buscador y tengas el argumento listo.</li>
+    <li>Que "sin resultados" y "catálogo vacío" sean mensajes distintos.</li>
+  </ul>
+
+  <details class="pista">
+    <summary>Pista — derivados y formularios que no rompen las reglas</summary>
+    <ul>
+      <li>Las lecturas derivadas de un módulo reciben como primer argumento su propio estado, y como segundo las otras lecturas derivadas del mismo módulo. Puedes componer una encima de otra: el cupo restante es el máximo menos el total, y el total ya lo calculaste.</li>
+      <li>Si el módulo del socio necesita contar préstamos que viven en <em>otro</em> módulo, la lectura derivada recibe también el estado raíz y las lecturas derivadas raíz — tercer y cuarto argumento. Otra opción, muchas veces más limpia: que el conteo sea una lectura derivada del módulo de préstamos, que es quien tiene la lista.</li>
+      <li>Para el formulario, la función de valores calculados acepta, en vez de una función suelta, un objeto con dos funciones: una que devuelve el valor y otra que recibe el valor nuevo. En la segunda es donde disparas la escritura al store.</li>
+      <li>Si te da lata escribir ese par de funciones para cada uno de los tres campos, escribe una función que lo <em>fabrique</em> recibiendo el nombre del campo. Tres líneas, y te ahorras las mismas seis repetidas.</li>
+      <li>Del lado del store, no necesitas una escritura por campo: una sola que reciba qué campo y qué valor te sirve para los tres. Piensa en cómo se accede a una propiedad de un objeto cuando el nombre viene en una variable.</li>
+      <li>Para el filtrado, cuidado con ordenar: los métodos que ordenan arreglos modifican el arreglo original. Si aplicas eso al arreglo que vive en el store, acabas de mutarlo desde la vista. Haz una copia antes.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ BLOQUE 4 ============ -->
+<section class="bloque" id="b4">
+  <div class="bloque__head">
+    <span class="num">4</span>
+    <h2>Los datos vienen de afuera</h2>
+    <span class="tag">Asincronía</span>
+  </div>
+
+  <p>
+    Hasta ahora el catálogo estaba escrito a mano en tu código. En la vida real llega por la red,
+    con demora, y a veces no llega. Vamos a simular eso <strong>sin backend</strong>: una función
+    que devuelve una promesa, espera cerca de un segundo, y entrega los libros.
+  </p>
+
+  <h3>Lo que debe hacer tu aplicación</h3>
+  <ul>
+    <li>Un módulo aparte que simule la API: una función que entrega el catálogo con demora artificial, y otra que registra un préstamo, también con demora.</li>
+    <li>La función de la API debe poder <strong>fallar a voluntad</strong>: un parámetro, una bandera, lo que quieras — pero tienes que poder provocar el error sin desconectar el wifi.</li>
+    <li>El catálogo se pide al entrar a la pantalla, no antes.</li>
+    <li>Los cuatro estados, todos visibles y todos distintos.</li>
+    <li>El mensaje de error que ve el usuario tiene que estar escrito en <strong>lenguaje humano</strong>. El detalle técnico va a la consola del navegador, no a la pantalla.</li>
+    <li>Un botón de reintentar que efectivamente vuelva a pedir los datos.</li>
+    <li>Si vuelves a entrar a la pantalla y el catálogo ya está cargado, <strong>no</strong> se pide de nuevo. Salvo que el reintento lo fuerce.</li>
+  </ul>
+
+  <h3>Los cuatro estados obligatorios</h3>
+  <ol>
+    <li><strong>Cargando</strong> — mientras llega la respuesta. Usa un esqueleto de contenido, no un spinner suelto: comunica la <em>forma</em> de lo que viene.</li>
+    <li><strong>Error</strong> — con mensaje humano y salida.</li>
+    <li><strong>Vacío</strong> — la petición salió bien y no había libros. <em>No es lo mismo que estar cargando</em>, y confundirlos hace que aparezca "no hay libros" parpadeando un segundo cada vez que entras.</li>
+    <li><strong>Con datos</strong> — el catálogo renderizado.</li>
+  </ol>
+
+  <div class="callout callout--stop">
+    <strong>Ni una sola espera dentro de una escritura del estado. Ninguna.</strong>
+    <p>
+      Va a haber un momento en que te parezca lo más cómodo del mundo: la escritura ya tiene el
+      estado a mano, le agregas la palabrita, pides los datos y los asignas. Funciona. La pantalla
+      se llena.
+    </p>
+    <p>
+      Y sin embargo rompiste la única cosa que Vuex te daba a cambio de toda la ceremonia. Devtools
+      anota la escritura y saca una foto del estado <em>en ese instante</em> — un segundo antes de
+      que lleguen los datos. La foto sale vacía. El historial pasa a mentir, y el viaje en el tiempo
+      deja de reconstruir nada. Averigua en qué capa va la espera y por qué esa capa sí puede.
+    </p>
+  </div>
+
+  <div class="callout callout--ojo">
+    <strong>El bloque que casi nadie escribe: el que corre pase lo que pase.</strong>
+    <p>
+      Si prendes el indicador de carga al empezar y lo apagas al terminar bien, ¿qué pasa cuando
+      falla? El indicador se queda prendido para siempre y el usuario ve un esqueleto eterno.
+      JavaScript tiene una tercera sección para el manejo de errores, además de intentar y capturar,
+      que se ejecuta siempre — con éxito, con error, e incluso si relanzas la excepción.
+      Ahí va el apagado.
+    </p>
+    <p>
+      Pruébalo: activa la falla, mira que aparezca el error, y confirma que el esqueleto se apagó.
+      Si sigue girando, te faltó esa sección.
+    </p>
+  </div>
+
+  <h3>La prueba de este bloque</h3>
+  <ol>
+    <li>Recarga la página: tienes que ver el esqueleto y después el catálogo.</li>
+    <li>Activa la falla y recarga: mensaje humano, sin esqueleto colgado, con botón de reintentar.</li>
+    <li>Desactiva la falla y aprieta reintentar: el catálogo carga.</li>
+    <li>Haz que la API devuelva una lista vacía: tiene que salir el mensaje de "no hay libros", <strong>no</strong> el de error ni el de cargando.</li>
+    <li>Navega a otra ruta y vuelve: no debe haber una segunda petición. Compruébalo con un mensaje en consola dentro de la función de la API.</li>
+  </ol>
+
+  <h3>Lo que se te va a evaluar</h3>
+  <ul>
+    <li>Que ninguna espera esté dentro de una escritura del estado, y sepas explicar qué se rompe si la pones ahí.</li>
+    <li>Que los cuatro estados existan y sean distinguibles a simple vista.</li>
+    <li>Que el usuario nunca vea un mensaje técnico ni un código de error.</li>
+    <li>Que el indicador de carga se apague también cuando falla.</li>
+    <li>Que la segunda visita a la pantalla no repita la petición, y puedas demostrarlo.</li>
+  </ul>
+
+  <details class="pista">
+    <summary>Pista — asincronía en la capa correcta</summary>
+    <ul>
+      <li>Para simular la demora, una promesa que se resuelve dentro de un temporizador es todo lo que necesitas. Una línea.</li>
+      <li>La capa que puede esperar es la misma que ya usaste en el bloque 2 para coordinar módulos. Cuando llegan los datos, recién ahí dispara la escritura.</li>
+      <li>El flujo típico son cuatro pasos: prender el indicador y limpiar el error; intentar y escribir el resultado; capturar y escribir un mensaje humano; y en la sección que siempre corre, apagar el indicador.</li>
+      <li>Para saber si "ya cargamos alguna vez" no te sirve preguntar si la lista está vacía: una lista vacía puede ser "todavía no pedí" o "pedí y no había". Necesitas una bandera aparte, y esa distinción es exactamente lo que separa el estado <em>vacío</em> del estado <em>cargando</em>.</li>
+      <li>Para no repetir la petición, la operación puede empezar preguntando si ya hay datos y salirse temprano. Dale un parámetro opcional para forzarla, que es el que va a usar el botón de reintentar.</li>
+      <li>Después de capturar el error, decide si lo relanzas. Si lo haces, quien llamó puede reaccionar; si no lo haces, el error muere ahí y la pantalla solo se entera por el estado. Las dos opciones son válidas — ten el argumento de por qué elegiste la tuya.</li>
+      <li>Cuando la conectes a Axios en la próxima clase, <strong>lo único que cambia es la función de la API</strong>. Ni una línea de tus componentes. Si tuvieras que tocarlos, es señal de que se te filtró lógica de red donde no correspondía.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ BLOQUE 5 ============ -->
+<section class="bloque" id="b5">
+  <div class="bloque__head">
+    <span class="num">5</span>
+    <h2>Que sobreviva al F5</h2>
+    <span class="tag">Plugins</span>
+  </div>
+
+  <p>
+    Un socio lleva dos libros pedidos, se equivoca de tecla, recarga la página y pierde todo.
+    Lo vas a arreglar, y la gracia es <strong>cómo</strong>: sin tocar un solo componente.
+  </p>
+
+  <h3>Lo que debe hacer tu aplicación</h3>
+  <ul>
+    <li>Los préstamos vigentes y los datos del socio sobreviven a una recarga completa.</li>
+    <li>Al arrancar la aplicación, si hay algo guardado, el estado se rellena con eso.</li>
+    <li>Si lo guardado está corrupto o tiene un formato que ya no usas, la app arranca igual con el estado vacío. <strong>No puede quedar en pantalla blanca.</strong></li>
+    <li>Todo esto se implementa en <strong>un archivo aparte</strong> que se registra en el store. Ni un componente se entera.</li>
+    <li>El catálogo <strong>no</strong> se guarda. Ese viene de la API cada vez.</li>
+  </ul>
+
+  <div class="callout callout--ojo">
+    <strong>Por qué el catálogo no se guarda, y esta pregunta vale más que el código.</strong>
+    <p>
+      Si guardas el catálogo y mañana la biblioteca compra tres ejemplares nuevos, el socio que
+      tenía la copia vieja no se entera nunca. Los datos que son <strong>dueños del servidor</strong>
+      se piden; los datos que son <strong>de esta sesión de este usuario</strong> se guardan.
+      Confundir esos dos es la fuente de la mitad de los bugs de "a mí no me aparece" en producción.
+    </p>
+  </div>
+
+  <h3>Cómo se hace, en concepto</h3>
+  <p>
+    El store te deja registrar funciones que se ejecutan al crearlo. Dentro de esa función tienes
+    el store completo, así que puedes hacer dos cosas: rellenar el estado con lo que había guardado,
+    y <strong>quedarte escuchando</strong> todas las escrituras que ocurran de ahí en adelante para
+    ir guardando. Averigua qué método del store te permite suscribirte a cada escritura y qué
+    información te entrega en cada una.
+  </p>
+
+  <div class="callout callout--stop">
+    <strong>Y ahora la parte que quiero que sientas.</strong>
+    <p>
+      Cuando termines este bloque, cuenta cuántos componentes tuviste que modificar para agregar
+      persistencia a toda la aplicación. La respuesta es <strong>cero</strong>.
+    </p>
+    <p>
+      Y eso solo es posible porque todas las modificaciones del estado pasan por un único tipo de
+      operación, con nombre, en un solo lugar. Si cada componente hubiera modificado el estado
+      a su manera, este plugin sería <em>imposible de escribir</em>: no habría dónde engancharse.
+      Todas las reglas que llevas cinco bloques aguantando acaban de pagar la cuenta completa,
+      de una vez.
+    </p>
+  </div>
+
+  <h3>Lo que se te va a evaluar</h3>
+  <ul>
+    <li>Que recargar la página no pierda los préstamos ni los datos del socio.</li>
+    <li>Que hayas ensuciado a mano lo guardado — escribe cualquier basura en el almacenamiento del navegador — y la app arranque igual sin romperse.</li>
+    <li>Que el catálogo <strong>no</strong> se persista, y tengas el argumento de por qué.</li>
+    <li>Que no hayas tocado ningún componente para lograrlo.</li>
+    <li>Que puedas explicar de dónde sale el "gancho" que hace posible el plugin.</li>
+  </ul>
+
+  <details class="pista">
+    <summary>Pista — persistir sin tocar componentes</summary>
+    <ul>
+      <li>Un plugin del store es simplemente una función que recibe el store. Se registra en la configuración, en una lista.</li>
+      <li>El método para escuchar escrituras entrega, en cada una, un objeto con el nombre completo de la operación y su carga, más el estado ya actualizado. Con el nombre puedes decidir si esa escritura te interesa: revisa si empieza con el prefijo del módulo que quieres guardar.</li>
+      <li>El almacenamiento del navegador guarda solo texto. Convierte a texto al guardar y de vuelta al leer. Y envuelve la lectura en un manejo de errores, porque si lo guardado está corrupto la conversión lanza una excepción y te tumba el arranque completo.</li>
+      <li>Para rellenar el estado necesitas una escritura nueva que reciba la lista completa y la reemplace. Valida adentro que lo que llegó sea realmente una lista: lo que sale del almacenamiento del navegador es dato no confiable, aunque lo hayas escrito tú mismo.</li>
+      <li>Guarda por módulo, no el store completo. Si guardas todo de una, terminas persistiendo indicadores de carga y mensajes de error, que es lo último que quieres restaurar al arrancar.</li>
+      <li>Si te sobra tiempo: escribe un segundo plugin que solo imprima cada escritura en consola con hora, nombre y carga, y que se registre <strong>solo en desarrollo</strong>. Vas a entender de golpe por qué la comunidad tiene una librería para esto.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ BLOQUE 6 ============ -->
+<section class="bloque" id="b6">
+  <div class="bloque__head">
+    <span class="num">6</span>
+    <h2>El doble clic que presta dos libros</h2>
+    <span class="tag">Concurrencia</span>
+  </div>
+
+  <p>
+    Este bloque tiene un solo objetivo y no es escribir código: es que veas fallar algo que
+    <em>funcionaba perfecto</em> en tu computador.
+  </p>
+
+  <h3>Rómpelo a propósito — parte 3 de 3</h3>
+  <ol>
+    <li>Haz que prestar pase por la API simulada: la operación ahora <strong>espera</strong> la
+        confirmación del servidor antes de escribir en el estado. Súbele la demora a dos segundos
+        para que se note bien.</li>
+    <li>Busca un libro que tenga <strong>exactamente un ejemplar disponible</strong>.</li>
+    <li>Haz clic en "Prestar" <strong>dos veces seguidas, rápido</strong>. Antes de que aparezca
+        el resultado del primero.</li>
+    <li>Espera a que terminen las dos operaciones y mira los números.</li>
+  </ol>
+
+  <p>
+    <strong>Prestaste dos ejemplares de un libro que tenía uno.</strong> El contador dice
+    <code>-1 disponibles</code>, o dice cero pero hay dos préstamos del mismo título en la lista.
+    Y no se cayó nada: las dos operaciones se ejecutaron completas y correctas.
+  </p>
+
+  <div class="callout callout--ojo">
+    <strong>Lo que acabas de provocar tiene nombre: condición de carrera.</strong>
+    <p>
+      Tu validación preguntó "¿queda algún ejemplar?" y la respuesta fue sí. Después esperó dos
+      segundos. En esos dos segundos, la segunda operación hizo <em>la misma pregunta</em> y obtuvo
+      <em>la misma respuesta</em>, porque todavía nadie había descontado nada. Las dos validaciones
+      pasaron. Las dos escrituras se ejecutaron. El estado quedó imposible.
+    </p>
+    <p>
+      Entre <strong>comprobar</strong> y <strong>actuar</strong> pasó tiempo, y en ese hueco cambió
+      el mundo. Esto no es un defecto de Vuex: le pasa a cualquier sistema donde haya una espera
+      entre la validación y el efecto. Es el mismo problema del asiento de avión que se vende dos
+      veces, del cupón que se canjea dos veces y de la transferencia que se hace dos veces.
+    </p>
+  </div>
+
+  <h3>Ahora arréglalo — y hay más de una respuesta</h3>
+  <p>
+    Vas a implementar <strong>dos</strong> defensas, porque protegen contra cosas distintas y
+    entender esa diferencia es el punto del bloque.
+  </p>
+
+  <ol>
+    <li>
+      <strong>Bloquear la operación mientras está en vuelo.</strong> Una bandera en el estado que
+      diga "hay un préstamo en proceso". La operación se sale de inmediato si ya hay una corriendo,
+      y el botón se deshabilita mientras tanto. Esto ataca el <em>síntoma</em>: mata el doble clic.
+    </li>
+    <li>
+      <strong>Volver a validar justo antes de escribir.</strong> Después de la espera, y antes de
+      tocar el estado, comprueba de nuevo que siga habiendo ejemplares. Esto ataca la
+      <em>causa</em>: cierra el hueco entre comprobar y actuar.
+    </li>
+  </ol>
+
+  <div class="callout callout--stop">
+    <strong>¿Por qué las dos, si con una ya no se rompe?</strong>
+    <p>
+      Porque protegen escenarios distintos. La bandera te salva del <strong>doble clic del mismo
+      usuario</strong> — un problema de interfaz. La revalidación te salva de que
+      <strong>otra cosa</strong> haya cambiado el estado durante la espera: otra pestaña, otro
+      componente, una operación en cadena que tú no lanzaste.
+    </p>
+    <p>
+      La bandera sola es una curita en la UI: el día que agregues un atajo de teclado o una segunda
+      pantalla que también preste, se te vuelve a abrir el hueco. Y prepárate para la pregunta
+      incómoda: <strong>en una app real con un servidor de verdad, ninguna de las dos alcanza.
+      ¿Por qué?</strong> Piénsalo antes de leer la pista.
+    </p>
+  </div>
+
+  <h3>La prueba de este bloque</h3>
+  <ol>
+    <li>Con las dos defensas puestas, repite el doble clic rápido sobre el libro de un ejemplar.
+        Solo se debe prestar uno, y el segundo intento debe informar por qué no se pudo.</li>
+    <li>Aprieta el botón diez veces seguidas, lo más rápido que puedas. Los números tienen que
+        cuadrar exacto.</li>
+    <li>Comprueba que el botón queda deshabilitado durante la espera y se vuelve a habilitar
+        después, <strong>también cuando la operación falla</strong>.</li>
+  </ol>
+
+  <h3>Lo que se te va a evaluar</h3>
+  <ul>
+    <li>Que hayas <strong>reproducido el error a propósito</strong> y puedas describir qué viste en pantalla y en Devtools.</li>
+    <li>Que expliques con tus palabras qué es una condición de carrera, sin leer la definición.</li>
+    <li>Que estén implementadas las dos defensas y sepas decir de qué protege cada una.</li>
+    <li>Que la bandera se apague también cuando la operación falla.</li>
+    <li>Que puedas nombrar otro escenario, fuera de esta actividad, donde pasaría exactamente lo mismo.</li>
+  </ul>
+
+  <details class="pista">
+    <summary>Pista — cerrar el hueco entre comprobar y actuar</summary>
+    <ul>
+      <li>La bandera vive en el estado, no en el componente. Si la pones en el componente, otra pantalla que también preste no se entera de que hay una operación en vuelo.</li>
+      <li>La operación debe salirse temprano y sin efectos si la bandera ya está prendida. Una línea al principio, antes de cualquier otra cosa.</li>
+      <li>Para apagarla pase lo que pase, usa la misma sección que aprendiste en el bloque 4: la que corre siempre. Si la apagas solo en el camino feliz, un error te deja el botón muerto para siempre y el usuario tiene que recargar.</li>
+      <li>La segunda validación no es copiar y pegar la primera: la primera evita trabajo inútil (ni siquiera llamamos a la API), la segunda protege la escritura. Cumplen funciones distintas aunque el código se parezca.</li>
+      <li>La respuesta a la pregunta incómoda: <strong>tu validación corre en el navegador del usuario</strong>. Otro socio, en otro computador, tiene su propio store con su propia copia del estado. Tu bandera no lo detiene, tu revalidación consulta un dato que puede estar viejo. En una app real la única defensa verdadera está <strong>en el servidor</strong>, donde el estado es uno solo. Lo del frontend es experiencia de usuario, no integridad de datos. Grábate esa frase.</li>
+      <li>Escenarios donde pasa lo mismo: dos personas comprando la última entrada, dos pestañas transfiriendo del mismo saldo, un botón de "confirmar pedido" que alguien aprieta dos veces con la conexión lenta. Ese último te va a pasar en tu primer trabajo. Palabra.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ============ EXTRA ============ -->
+<section class="bloque" id="extra">
+  <div class="bloque__head">
+    <span class="num">🚀</span>
+    <h2>Si terminas antes</h2>
+    <span class="tag">Opcional</span>
+  </div>
+
+  <p>
+    Solo si los seis bloques están terminados y funcionando. No empieces por acá:
+    entregar seis cosas sólidas vale más que doce a medias.
+  </p>
+
+  <h3>Nivel 1 — pulir lo que ya tienes</h3>
+  <ol>
+    <li><strong>Historial de devoluciones:</strong> un cuarto módulo que guarde los préstamos ya cerrados, con fecha de entrega y cuántos días estuvo afuera el libro.</li>
+    <li><strong>Libros atrasados:</strong> una lectura derivada que marque los préstamos con más de siete días. Píntalos distinto en el panel. Ojo con dónde calculas "hoy": la fecha actual es un dato impredecible y ya sabes qué hace eso con la reproducibilidad.</li>
+    <li><strong>Ranking:</strong> los cinco títulos más prestados, calculado desde el historial. Todo derivado, nada guardado.</li>
+    <li><strong>Notificación temporal</strong> que confirme cada operación y desaparezca sola. Decide si su estado va al store o al componente, y justifícalo.</li>
+    <li><strong>Ordenamiento configurable</strong> del catálogo: por título, por autor, por año o por disponibilidad. ¿El criterio elegido va al store o es local? Misma pregunta del bloque 3, ahora contéstala tú.</li>
+  </ol>
+
+  <h3>Nivel 2 — conceptos nuevos</h3>
+  <ol>
+    <li>
+      <strong>Rutas protegidas.</strong> Agrega una vista de administración que solo se pueda abrir
+      si el socio tiene rol de bibliotecario, con un guardia global que consulte el store antes de
+      dejar pasar. Después abre Devtools, cámbiate el rol a mano y entra igual.
+      <strong>Que funcione ese truco es la lección</strong>: el guardia es comodidad, no seguridad.
+      La seguridad de verdad vive en el servidor.
+    </li>
+    <li>
+      <strong>Módulo dinámico.</strong> Haz que el módulo de administración se registre solo cuando
+      alguien entra a esa ruta, y no antes. Averigua cómo se registra y se quita un módulo en
+      caliente, y qué le pasa a su estado cuando lo quitas.
+    </li>
+    <li>
+      <strong>Deshacer la última operación.</strong> Usando el mismo gancho del bloque 5, guarda las
+      últimas diez escrituras y ofrece un botón para revertir la última. Vas a descubrir rápido que
+      no todas las operaciones se pueden revertir con la misma facilidad, y esa dificultad tiene
+      todo que ver con si guardaste el estado anterior o solo el cambio.
+    </li>
+    <li>
+      <strong>Sincronizar entre pestañas.</strong> Haz que abrir la app en dos pestañas y prestar un
+      libro en una actualice la otra. El navegador emite un evento cuando cambia el almacenamiento
+      desde otra pestaña: engánchate ahí. Y ahora vuelve al bloque 6 y pregúntate si esto arregla o
+      empeora la condición de carrera.
+    </li>
+    <li>
+      <strong>Traduce un componente a Options API.</strong> Toma tu panel de préstamos y reescríbelo
+      con la otra sintaxis, usando los ayudantes clásicos de Vuex. Compara los dos archivos lado a
+      lado y decide cuál prefieres <em>con argumentos</em>. Este ejercicio es el más útil de todos
+      para el mundo real, porque el 80% del código Vuex que te vas a encontrar está escrito así.
+    </li>
+  </ol>
+
+  <div class="callout">
+    <strong>Y el cierre, que no es sobre código.</strong>
+    <p>
+      La sintaxis de Vuex la vas a olvidar. Es más: dentro de unos años probablemente estés usando
+      otra librería, con otros nombres para las mismas cosas. Lo que no se te va a olvidar —si
+      hiciste bien esta actividad— es <em>por qué</em> tu vista se congeló cuando leíste el estado
+      sin envolverlo, por qué el contador que guardaste se desincronizó a la tercera operación, y
+      por qué un doble clic prestó dos libros de un ejemplar.
+    </p>
+    <p>
+      Esos tres momentos son la clase. Todo lo demás es sintaxis, y la sintaxis se busca en la
+      documentación en treinta segundos.
+    </p>
+    <p>
+      Los conceptos primero. El código después.
+    </p>
+  </div>
+</section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Módulo 7 · Lección 3 — Almacenamiento de datos en Vuex · Actividad práctica con Vuex 4 y Composition API
+  </div>
+</footer>
+
+</body>
+</html>
