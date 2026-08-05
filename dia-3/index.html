@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Actividad Práctica · El Pañol — Vuex con módulos, Router y Axios</title>
+<style>
+  /* ==================================================================
+     SISTEMA VISUAL
+     Cada ejercicio tiene un COLOR PROPIO. Ese color pinta la banda del
+     título, el riel de los pasos y la píldora del menú fijo. Así, mires
+     donde mires, siempre sabes en qué ejercicio estás.
+     ================================================================== */
+  :root{
+    --bg:#eaeef3;
+    --surface:#ffffff;
+    --surface-2:#f5f8fa;
+    --ink:#151c23;
+    --ink-soft:#5a6673;
+    --line:#dce3ea;
+    --brand:#42b883;
+    --brand-dark:#2f8f66;
+    --accent:#34495e;
+    --warn:#e8a33d;
+    --danger:#c0392b;
+    --info:#3b7dd8;
+    --code-bg:#1b212c;
+    --code-ink:#e6edf3;
+    --radius:14px;
+    --barra-alto:52px;
+    --sombra:0 1px 2px rgba(20,30,40,.05), 0 8px 24px rgba(20,30,40,.07);
+
+    /* color por defecto; cada sección lo sobrescribe más abajo */
+    --acento:#34495e;
+    --acento-suave:#eef2f6;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.65;
+    padding-top:var(--barra-alto);
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+
+  /* ------------------------------------------------------------------
+     BARRA FIJA — se construye desde JavaScript al final del documento
+     ------------------------------------------------------------------ */
+  .barra-fija{
+    position:fixed;top:0;left:0;right:0;z-index:60;
+    background:rgba(255,255,255,.94);
+    backdrop-filter:saturate(180%) blur(12px);
+    -webkit-backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid var(--line);
+    box-shadow:0 1px 12px rgba(20,30,40,.06);
+  }
+  .barra-progreso{height:3px;background:transparent;}
+  .barra-progreso i{display:block;height:100%;width:0;background:linear-gradient(90deg,#42b883,#3b7dd8);transition:width .1s linear;}
+  .barra-cuerpo{
+    max-width:1000px;margin:0 auto;
+    height:calc(var(--barra-alto) - 3px);
+    display:flex;align-items:center;gap:.75rem;padding:0 1.5rem;
+  }
+  .barra-marca{
+    font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:#fff;background:var(--accent);padding:.25rem .55rem;border-radius:5px;
+    white-space:nowrap;flex-shrink:0;
+  }
+  .barra-actual{
+    font-size:.85rem;font-weight:700;color:var(--ink);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    flex:1;min-width:0;
+  }
+  .barra-saltos{display:flex;gap:.3rem;flex-shrink:0;}
+  .barra-saltos a{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:30px;height:30px;padding:0 .5rem;
+    border-radius:8px;border:1px solid var(--line);
+    background:var(--surface-2);color:var(--ink-soft);
+    font-size:.78rem;font-weight:700;text-decoration:none;
+    transition:all .15s ease;
+  }
+  .barra-saltos a:hover{border-color:var(--acento);color:var(--acento);}
+  .barra-saltos a.activo{
+    background:var(--acento-pill,#34495e);border-color:var(--acento-pill,#34495e);
+    color:#fff;box-shadow:0 2px 8px rgba(20,30,40,.18);
+  }
+  .barra-saltos a.arriba{font-size:.95rem;}
+  @media (max-width:760px){
+    .barra-actual{display:none;}
+    .barra-saltos{flex:1;justify-content:flex-end;}
+  }
+  @media (max-width:420px){
+    .barra-saltos a.arriba{display:none;}
+  }
+
+  /* ------------------------------------------------------------------ */
+  header.hero{
+    background:
+      radial-gradient(1200px 400px at 15% -10%, rgba(66,184,131,.28), transparent 60%),
+      linear-gradient(135deg,#22313f,#141d26);
+    color:#fff;padding:3.25rem 1.5rem;
+  }
+  header.hero .wrap{padding:0;max-width:1000px;}
+  header.hero h1{margin:0 0 .75rem;font-size:2.15rem;line-height:1.15;letter-spacing:-.02em;}
+  header.hero p{margin:0 0 .75rem;color:#c4d1dc;max-width:70ch;}
+  header.hero p:last-child{margin-bottom:0;}
+  header.hero strong{color:#fff;}
+  header.hero code{background:rgba(255,255,255,.12);color:#d7f0e4;}
+  .badge{
+    display:inline-block;background:var(--brand);color:#0b2418;
+    font-weight:800;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:.3rem .8rem;border-radius:999px;margin-bottom:1.1rem;
+  }
+
+  /* ------------------------------------------------------------------
+     ÍNDICE — tarjetas numeradas, no una lista suelta
+     ------------------------------------------------------------------ */
+  nav.toc{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.5rem;margin:2rem 0 2.5rem;box-shadow:var(--sombra);
+  }
+  nav.toc h2{
+    margin:0 0 1rem;font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--ink-soft);font-weight:800;
+  }
+  nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:.5rem;}
+  nav.toc li{
+    margin:0;position:relative;
+    padding:.7rem .9rem .7rem 3rem;
+    border:1px solid var(--line);border-radius:10px;background:var(--surface-2);
+    transition:all .15s ease;
+  }
+  nav.toc li::before{
+    position:absolute;left:.7rem;top:50%;transform:translateY(-50%);
+    width:26px;height:26px;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#fff;font-size:.78rem;font-weight:800;
+  }
+  /* La numeración del índice tiene que ser LA MISMA que la de las secciones
+     y la del menú fijo. Si acá dijera "2" donde el ejercicio dice "1",
+     el lector pierde la referencia — que es justo lo que queremos evitar. */
+  nav.toc li:nth-child(1)::before{content:"◆";background:#5b6b7c;font-size:.7rem;}
+  nav.toc li:nth-child(2)::before{content:"1";background:#2f8f66;}
+  nav.toc li:nth-child(3)::before{content:"2";background:#2a6fc9;}
+  nav.toc li:nth-child(4)::before{content:"3";background:#c47a1b;}
+  nav.toc li:nth-child(5)::before{content:"4";background:#7a4fc0;}
+  nav.toc li:nth-child(6)::before{content:"5";background:#b8384f;}
+  nav.toc li:nth-child(7)::before{content:"✓";background:#33424f;}
+  /* Barra lateral del color del ejercicio: refuerza el código de color */
+  nav.toc li::after{
+    content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;
+  }
+  nav.toc li:nth-child(1)::after{background:#5b6b7c;}
+  nav.toc li:nth-child(2)::after{background:#2f8f66;}
+  nav.toc li:nth-child(3)::after{background:#2a6fc9;}
+  nav.toc li:nth-child(4)::after{background:#c47a1b;}
+  nav.toc li:nth-child(5)::after{background:#7a4fc0;}
+  nav.toc li:nth-child(6)::after{background:#b8384f;}
+  nav.toc li:nth-child(7)::after{background:#33424f;}
+  nav.toc li:hover{background:#fff;border-color:#c3cfda;transform:translateX(3px);box-shadow:var(--sombra);}
+  nav.toc a{color:var(--ink);text-decoration:none;font-weight:700;}
+  nav.toc a:hover{color:var(--brand-dark);}
+  nav.toc .min{color:var(--ink-soft);font-weight:500;font-size:.82rem;display:block;}
+
+  /* ------------------------------------------------------------------
+     SECCIÓN DE EJERCICIO — banda de color + contenido
+     ------------------------------------------------------------------ */
+  body{counter-reset:ejercicio;}
+
+  section.ejercicio{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:2rem;margin-bottom:2.25rem;
+    box-shadow:var(--sombra);
+    scroll-margin-top:calc(var(--barra-alto) + 12px);
+    overflow:hidden;
+  }
+
+  /* Cada ejercicio, su color. Ésta es la clave para no perderse. */
+  #prep  {--acento:#5b6b7c;--acento-suave:#eef1f4;--acento-2:#43505d;}
+  #ej1   {--acento:#2f8f66;--acento-suave:#e9f6f0;--acento-2:#1f6b4b;}
+  #ej2   {--acento:#2a6fc9;--acento-suave:#e9f1fb;--acento-2:#1d5099;}
+  #ej3   {--acento:#c47a1b;--acento-suave:#fdf3e4;--acento-2:#96590c;}
+  #ej4   {--acento:#7a4fc0;--acento-suave:#f2ecfb;--acento-2:#5b3595;}
+  #ej5   {--acento:#b8384f;--acento-suave:#fbebee;--acento-2:#8d2438;}
+  #cierre{--acento:#33424f;--acento-suave:#eef1f4;--acento-2:#22303c;}
+
+  /* Banda del título, a sangre completa */
+  section.ejercicio > h2{
+    margin:-2rem -2rem 0;
+    padding:1.4rem 2rem 1.3rem 2rem;
+    background:linear-gradient(135deg,var(--acento),var(--acento-2));
+    color:#fff;font-size:1.4rem;line-height:1.3;letter-spacing:-.01em;
+    border:0;
+    display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;
+  }
+  section.ejercicio > h2 em{font-style:normal;background:rgba(255,255,255,.18);padding:.05em .4em;border-radius:5px;}
+
+  /* Número del ejercicio en un cuadrado */
+  section.ejercicio:not(#prep):not(#cierre){counter-increment:ejercicio;}
+  section.ejercicio > h2::before{
+    flex-shrink:0;
+    width:40px;height:40px;border-radius:11px;
+    background:rgba(255,255,255,.2);
+    border:1px solid rgba(255,255,255,.28);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.15rem;font-weight:800;
+  }
+  section.ejercicio:not(#prep):not(#cierre) > h2::before{content:counter(ejercicio);}
+  #prep   > h2::before{content:"◆";font-size:1rem;}
+  #cierre > h2::before{content:"✓";}
+
+  /* Franja de metadatos, pegada bajo la banda */
+  .meta{
+    margin:0 -2rem 1.75rem;
+    padding:.7rem 2rem;
+    background:var(--acento-suave);
+    border-bottom:1px solid var(--line);
+    color:var(--ink-soft);font-size:.85rem;
+  }
+  .meta strong{color:var(--acento-2);}
+
+  /* ------------------------------------------------------------------
+     PASOS — h3 numerado sobre un riel vertical
+     ------------------------------------------------------------------ */
+  section.ejercicio{counter-reset:paso;}
+  section.ejercicio h3{
+    counter-increment:paso;
+    position:relative;
+    margin:2.5rem 0 .85rem;
+    padding:0 0 .55rem 2.6rem;
+    font-size:1.14rem;font-weight:800;color:var(--ink);
+    letter-spacing:-.01em;
+    border-bottom:2px solid var(--acento-suave);
+  }
+  section.ejercicio h3::before{
+    content:counter(paso);
+    position:absolute;left:0;top:-.1em;
+    width:28px;height:28px;border-radius:9px;
+    background:var(--acento);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.8rem;font-weight:800;
+    box-shadow:0 2px 6px rgba(20,30,40,.16);
+  }
+  section.ejercicio h3:first-of-type{margin-top:1rem;}
+
+  h4{margin:1.6rem 0 .5rem;font-size:.9rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;font-weight:800;}
+
+  p{margin:0 0 1rem;}
+  section.ejercicio > ol,
+  section.ejercicio > ul{margin:0 0 1rem;padding-left:1.4rem;}
+  section.ejercicio > ol li,
+  section.ejercicio > ul li{margin-bottom:.4rem;}
+
+  /* ------------------------------------------------------------------
+     CÓDIGO — la etiqueta dice de un vistazo qué tipo de bloque es
+     ------------------------------------------------------------------ */
+  .file{
+    display:inline-flex;align-items:flex-start;gap:.45rem;
+    background:var(--accent);color:#fff;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;font-weight:600;
+    line-height:1.5;
+    padding:.35rem .8rem;border-radius:8px 8px 0 0;margin-top:1.4rem;
+    max-width:100%;
+  }
+  /* El ícono se queda arriba cuando la etiqueta se parte en dos líneas
+     (pasa en pantallas angostas). Centrado se vería flotando en el medio. */
+  .file::before{content:"📄";font-family:inherit;flex-shrink:0;line-height:1.5;}
+  .file--term{background:#1b212c;}
+  .file--term::before{content:"❯";font-weight:800;}
+  .file--api{background:#2a5da8;}
+  .file--api::before{content:"⇄";}
+  .file--mal{background:var(--danger);}
+  .file--mal::before{content:"✗";font-weight:800;}
+  .file--maqueta{background:#5b6b7c;}
+  .file--maqueta::before{content:"◧";font-weight:800;}
+  .file--bien{background:var(--brand-dark);}
+  .file--bien::before{content:"✓";font-weight:800;}
+
+  pre{
+    background:var(--code-bg);color:var(--code-ink);
+    padding:1.1rem;border-radius:0 var(--radius) var(--radius) var(--radius);
+    overflow-x:auto;margin:0 0 1.1rem;font-size:.84rem;line-height:1.6;
+    box-shadow:0 3px 14px rgba(20,30,40,.16);
+  }
+  pre code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  p code,li code,td code,th code{
+    background:#e8edf2;color:#1d2b38;padding:.12rem .38rem;border-radius:5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;
+    border:1px solid #dae1e8;
+  }
+
+  /* ------------------------------------------------------------------
+     AVISOS — cada tipo lleva su etiqueta visible arriba
+     ------------------------------------------------------------------ */
+  .nota,.ojo,.alto,.vivo{
+    position:relative;
+    padding:2.1rem 1.15rem 1rem 1.35rem;
+    border-radius:0 10px 10px 0;
+    margin:1.25rem 0;
+    border-left:4px solid;
+  }
+  .nota::before,.ojo::before,.alto::before,.vivo::before{
+    position:absolute;top:.6rem;left:1.35rem;
+    font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    padding:.15rem .5rem;border-radius:4px;color:#fff;
+  }
+  .nota p:last-child,.ojo p:last-child,.alto p:last-child,.vivo p:last-child{margin-bottom:0;}
+
+  .nota{background:#eef8f3;border-left-color:var(--brand);}
+  .nota::before{content:"Clave";background:var(--brand-dark);}
+  .nota strong{color:var(--brand-dark);}
+
+  .ojo{background:#fdf6e8;border-left-color:var(--warn);}
+  .ojo::before{content:"Matiz";background:#a06b12;}
+  .ojo strong{color:#8a5c0f;}
+
+  .alto{background:#fdeceb;border-left-color:var(--danger);}
+  .alto::before{content:"Cuidado";background:#a5281b;}
+  .alto strong{color:#96251a;}
+
+  .vivo{background:#ebf2fc;border-left-color:var(--info);}
+  .vivo::before{content:"En vivo";background:#2a5da8;}
+  .vivo strong{color:#22528f;}
+
+  /* ------------------------------------------------------------------
+     TABLAS
+     ------------------------------------------------------------------ */
+  .tabla-scroll{
+    overflow-x:auto;margin:1.25rem 0;
+    border:1px solid var(--line);border-radius:10px;background:var(--surface);
+  }
+  table{width:100%;border-collapse:collapse;margin:0;font-size:.88rem;min-width:540px;}
+  th,td{text-align:left;padding:.65rem .85rem;border-bottom:1px solid var(--line);vertical-align:top;}
+  thead th{
+    background:var(--acento-suave);color:var(--acento-2);
+    font-weight:800;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;
+    border-bottom:2px solid var(--acento);
+    position:sticky;top:0;
+  }
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  tbody tr:hover{background:#eef4f8;}
+  tbody tr:last-child td{border-bottom:0;}
+  td.ok{color:var(--brand-dark);font-weight:700;}
+  td.no{color:var(--danger);font-weight:700;}
+
+  /* ------------------------------------------------------------------
+     RETO Y CHECKLIST — cierres visuales de cada ejercicio
+     ------------------------------------------------------------------ */
+  .reto{
+    position:relative;
+    border:2px dashed var(--brand);border-radius:12px;
+    padding:2.2rem 1.35rem 1.15rem;margin-top:1.75rem;
+    background:linear-gradient(180deg,#f4fcf8,#ffffff);
+  }
+  .reto::before{
+    content:"Mini-reto";position:absolute;top:-.7rem;left:1.1rem;
+    background:var(--brand-dark);color:#fff;
+    font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    padding:.2rem .6rem;border-radius:5px;
+  }
+  .reto h4{margin-top:0;color:var(--brand-dark);font-size:1rem;text-transform:none;letter-spacing:0;}
+  .reto p:last-child,.reto ol:last-child{margin-bottom:0;}
+  .reto ol{padding-left:1.3rem;}
+
+  .check{
+    position:relative;
+    background:var(--acento-suave);border:1px solid var(--acento);
+    border-radius:12px;padding:2.2rem 1.35rem 1.2rem;margin-top:1.75rem;
+  }
+  .check::before{
+    content:"Cierre";position:absolute;top:-.7rem;left:1.1rem;
+    background:var(--acento);color:#fff;
+    font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    padding:.2rem .6rem;border-radius:5px;
+  }
+  .check h4{margin-top:0;color:var(--acento-2);font-size:1rem;text-transform:none;letter-spacing:0;}
+  .check ul{margin:0;padding-left:0;list-style:none;}
+  .check li{
+    margin-bottom:.5rem;position:relative;padding-left:1.7rem;
+    font-size:.92rem;
+  }
+  .check li::before{
+    content:"";position:absolute;left:0;top:.35em;
+    width:15px;height:15px;border-radius:4px;
+    border:2px solid var(--acento);background:#fff;
+  }
+  .check li:last-child{margin-bottom:0;}
+
+  /* ------------------------------------------------------------------
+     FLUJO Y COMPARACIONES
+     ------------------------------------------------------------------ */
+  .flujo{
+    display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;
+    background:linear-gradient(135deg,#22313f,#161f28);color:#fff;border-radius:12px;
+    padding:1.1rem 1.25rem;margin:1.4rem 0;font-size:.82rem;
+    box-shadow:0 3px 14px rgba(20,30,40,.18);
+  }
+  .flujo span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:.35rem .7rem;font-weight:700;}
+  .flujo span.hi{background:var(--brand);color:#0b2418;border-color:var(--brand);}
+  .flujo em{color:#8fa3b5;font-style:normal;font-weight:800;}
+
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin:1.1rem 0;}
+  .duo > div{min-width:0;}
+  .duo .file{margin-top:0;}
+  @media (max-width:860px){ .duo{grid-template-columns:1fr;} }
+
+  footer{
+    text-align:center;color:var(--ink-soft);font-size:.85rem;
+    padding:2rem 1rem 0;margin-top:2rem;border-top:1px solid var(--line);
+  }
+
+  /* ------------------------------------------------------------------
+     BOTÓN COPIAR
+     ------------------------------------------------------------------ */
+  .bloque-codigo{position:relative;}
+  .btn-copiar{
+    position:absolute;top:.55rem;right:.55rem;
+    display:inline-flex;align-items:center;gap:.35rem;
+    min-height:32px;padding:0 .7rem;
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:7px;
+    background:rgba(255,255,255,.09);
+    color:#c9d4de;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:.74rem;font-weight:700;
+    cursor:pointer;opacity:0;
+    transition:opacity .15s ease, background .15s ease, color .15s ease;
+  }
+  .bloque-codigo:hover .btn-copiar,
+  .btn-copiar:focus-visible{opacity:1;}
+  .btn-copiar:hover{background:rgba(66,184,131,.28);color:#fff;border-color:rgba(66,184,131,.65);}
+  .btn-copiar.ok{background:#42b883;color:#0b2418;border-color:#42b883;opacity:1;}
+  .btn-copiar.falla{background:#c0392b;color:#fff;border-color:#c0392b;opacity:1;}
+  @media (hover:none){ .btn-copiar{opacity:1;} }
+
+  /* ------------------------------------------------------------------ */
+  @media (max-width:640px){
+    :root{--barra-alto:48px;}
+    .wrap{padding:1.25rem 1rem 4rem;}
+    section.ejercicio{padding:1.25rem 1rem;border-radius:12px;}
+    section.ejercicio > h2{
+      margin:-1.25rem -1rem 0;padding:1.1rem 1rem;font-size:1.15rem;gap:.6rem;
+    }
+    section.ejercicio > h2::before{width:32px;height:32px;font-size:1rem;}
+    .meta{margin:0 -1rem 1.25rem;padding:.6rem 1rem;font-size:.8rem;}
+    section.ejercicio h3{font-size:1.02rem;padding-left:2.3rem;margin-top:2rem;}
+    section.ejercicio h3::before{width:25px;height:25px;font-size:.74rem;}
+    header.hero{padding:2.25rem 1rem;}
+    header.hero h1{font-size:1.5rem;}
+    pre{font-size:.78rem;padding:.9rem;}
+    .btn-copiar{font-size:.7rem;padding:0 .5rem;}
+  }
+
+  /* ==================================================================
+     COLOREADO DE SINTAXIS
+     Lo pinta un resaltador propio, escrito a mano al final del documento.
+     Sin CDN ni librerías: este archivo tiene que funcionar abierto
+     directamente desde el disco, sin internet.
+     ================================================================== */
+  pre code{
+    --t-com:#7f8fa3;   /* comentarios      */
+    --t-str:#a8d96d;   /* textos           */
+    --t-kw:#d296ec;    /* palabras clave   */
+    --t-lit:#f89a6a;   /* true/false/null  */
+    --t-num:#f89a6a;   /* números          */
+    --t-fn:#7fb5ff;    /* funciones        */
+    --t-prop:#6fdcc9;  /* propiedades      */
+    --t-op:#92dbf7;    /* operadores       */
+    --t-tag:#f5838f;   /* etiquetas HTML   */
+    --t-attr:#f3cb6d;  /* atributos        */
+    --t-dir:#5ad79b;   /* directivas Vue   */
+  }
+  .t-com{color:var(--t-com);font-style:italic;}
+  .t-str{color:var(--t-str);}
+  .t-kw{color:var(--t-kw);font-weight:600;}
+  .t-lit{color:var(--t-lit);}
+  .t-num{color:var(--t-num);}
+  .t-fn{color:var(--t-fn);}
+  .t-prop{color:var(--t-prop);}
+  .t-op{color:var(--t-op);}
+  .t-tag{color:var(--t-tag);}
+  .t-attr{color:var(--t-attr);}
+  .t-dir{color:var(--t-dir);font-weight:600;}
+  .t-interp{color:var(--t-attr);}
+  .t-ruta{color:var(--t-attr);}
+
+  /* Distintivo del lenguaje, arriba a la derecha del bloque */
+  pre[data-lang]{position:relative;}
+  pre[data-lang]::after{
+    content:attr(data-lang);
+    position:absolute;top:.55rem;right:.6rem;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:rgba(255,255,255,.28);
+    pointer-events:none;transition:opacity .15s ease;
+  }
+  .bloque-codigo:hover pre[data-lang]::after{opacity:0;}
+
+  /* ==================================================================
+     QUÉ ES CADA BLOQUE: el borde izquierdo lo dice sin leer nada
+     ================================================================== */
+  pre[data-tipo]{border-left:5px solid #46586e;}
+  pre[data-tipo="solucion"]{border-left-color:var(--brand);}
+  pre[data-tipo="problema"]{border-left-color:var(--danger);}
+  pre[data-tipo="maqueta"]{border-left-color:#5b6b7c;}
+  pre[data-tipo="terminal"]{border-left-color:#7f8fa3;}
+  pre[data-tipo="api"]{border-left-color:#4d8ce0;}
+
+  /* Cinta en la etiqueta: SOLUCIÓN / NO COPIAR */
+  .file::after{
+    margin-left:.5rem;padding:.1rem .45rem;border-radius:4px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:.62rem;font-weight:800;letter-spacing:.09em;
+    flex-shrink:0;align-self:center;
+  }
+  .file--bien::after{content:"SOLUCIÓN";background:rgba(255,255,255,.24);color:#fff;}
+  .file--mal::after{content:"NO COPIAR";background:rgba(0,0,0,.28);color:#ffe2de;}
+
+  .file{scroll-margin-top:calc(var(--barra-alto) + 16px);}
+
+  /* ==================================================================
+     ÍNDICE DE CÓDIGO RESUELTO — se genera solo, al inicio de cada ejercicio
+     ================================================================== */
+  .resuelto{
+    margin:0 0 1.75rem;
+    border:1px solid var(--acento);border-radius:11px;
+    background:var(--surface);overflow:hidden;
+  }
+  .resuelto > summary{
+    cursor:pointer;list-style:none;
+    padding:.7rem 1rem;background:var(--acento-suave);
+    display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;
+    font-size:.8rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--acento-2);
+  }
+  .resuelto > summary::-webkit-details-marker{display:none;}
+  .resuelto > summary::before{
+    content:"›";font-size:1.15rem;line-height:1;
+    transition:transform .15s ease;display:inline-block;
+  }
+  .resuelto[open] > summary::before{transform:rotate(90deg);}
+  .resuelto > summary:hover{filter:brightness(.97);}
+  .resuelto__conteo{
+    margin-left:auto;text-transform:none;letter-spacing:0;
+    font-weight:700;font-size:.75rem;color:var(--ink-soft);
+  }
+  .resuelto ol{
+    margin:0;padding:.7rem 1rem .85rem;list-style:none;
+    display:grid;gap:.3rem;counter-reset:archivo;
+  }
+  .resuelto li{counter-increment:archivo;margin:0;font-size:.85rem;}
+  .resuelto li::before{
+    content:counter(archivo);
+    display:inline-flex;align-items:center;justify-content:center;
+    width:19px;height:19px;margin-right:.55rem;border-radius:5px;
+    background:var(--acento);color:#fff;font-size:.66rem;font-weight:800;
+    vertical-align:.05em;
+  }
+  .resuelto a{
+    color:var(--ink);text-decoration:none;font-weight:600;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.83rem;
+    border-bottom:1px dashed transparent;
+  }
+  .resuelto a:hover{color:var(--acento-2);border-bottom-color:var(--acento);}
+  .resuelto__nota{
+    margin:0;padding:0 1rem .85rem;
+    font-size:.78rem;color:var(--ink-soft);
+  }
+
+  /* Para imprimir el material como apunte de clase */
+  @media print{
+    body{padding-top:0;background:#fff;}
+    .barra-fija,.btn-copiar{display:none !important;}
+    pre[data-lang]::after{display:none;}
+    section.ejercicio{break-inside:avoid;box-shadow:none;border:1px solid #ccc;}
+    pre{box-shadow:none;}
+    .resuelto{break-inside:avoid;}
+    .resuelto[open] > summary::before{transform:none;}
+  }
+
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">Módulo 7 · Lección 3 · Actividad práctica</span>
+    <h1>El Pañol: un sistema de préstamo de equipos</h1>
+    <p>
+      Acabas de ver en vivo cómo se arma <strong>El Recinto</strong>. Ahora te toca a ti, con otro sistema y
+      contra la misma API real. Mismo esqueleto técnico —<strong>módulos de Vuex, Vue Router y axios</strong>—
+      con un negocio distinto y reglas propias.
+    </p>
+    <p>
+      Este documento <strong>no trae la solución</strong>. Trae el encargo, la documentación de la API y los
+      criterios con los que se va a revisar tu trabajo. El código lo escribes tú.
+    </p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="vivo">
+    <strong>El encargo</strong>
+    <p>
+      El <strong>pañol</strong> de la institución presta equipos: notebooks, proyectores, routers,
+      multímetros. Hoy funciona con un cuaderno y un lápiz. Cuando alguien pregunta "¿quedan notebooks?",
+      la respuesta es revisar hoja por hoja quién se llevó qué y quién todavía no lo trae.
+    </p>
+    <p>
+      Te piden una aplicación para el mesón. Tiene que dejar ver el inventario con las unidades realmente
+      disponibles, registrar préstamos nuevos, marcar entregas y devoluciones, y mostrarle al encargado
+      un panel con lo que está fuera y lo que va atrasado.
+    </p>
+    <p>
+      <strong>El backend ya existe y ya funciona.</strong> Tú construyes el frontend completo.
+    </p>
+  </div>
+
+  <div class="alto">
+    <strong>Lo primero: esto NO es el mismo problema que el Recinto. Léelo antes de abrir el editor.</strong>
+    <p>
+      La estructura es idéntica —un catálogo del que depende un CRUD— pero la regla de negocio es de otra
+      naturaleza, y si intentas copiar el código de la clase te vas a estrellar:
+    </p>
+    <p>
+      En el Recinto el conflicto era una <strong>colisión exacta</strong>: esa cancha, ese día, esa hora.
+      Una pregunta de sí o no.
+    </p>
+    <p>
+      Acá el conflicto es de <strong>capacidad</strong>: no importa cuándo, importa <em>cuántas unidades
+      quedan</em> sumando todos los préstamos que siguen fuera. Una pregunta de cuántos, no de sí o no.
+    </p>
+    <p>
+      Lo que sí se transfiere es la <strong>idea</strong>: hay una regla que sólo el servidor puede evaluar,
+      responde <code>409</code>, y tu interfaz tiene que saber mostrarla distinto de un error de campo.
+    </p>
+  </div>
+
+  <div class="ojo">
+    <strong>Qué se evalúa y qué no.</strong>
+    <p>
+      Se evalúa <strong>dónde pusiste cada cosa</strong>: si axios vive sólo en las actions, si los módulos
+      tienen sentido, si el estado del formulario está donde corresponde, si distingues un 422 de un 409.
+    </p>
+    <p>
+      <strong>No</strong> se evalúa el diseño. Más abajo tienes una hoja de estilos completa para copiar y
+      pegar: úsala y no pierdas ni un minuto maquetando. Si tu pantalla se ve fea pero el estado está bien
+      manejado, está aprobada.
+    </p>
+  </div>
+
+  <nav class="toc">
+    <h2>Ruta de trabajo</h2>
+    <ol>
+      <li><a href="#prep">De dónde partes</a> <span class="min">· proyecto, dependencias y la API que ya existe</span></li>
+      <li><a href="#ej1"><strong>Requisito 1</strong> — Las cuatro pantallas y su navegación</a> <span class="min">· router</span></li>
+      <li><a href="#ej2"><strong>Requisito 2</strong> — El inventario: primer módulo</a> <span class="min">· axios en una action</span></li>
+      <li><a href="#ej3"><strong>Requisito 3</strong> — La planilla de préstamos: segundo módulo</a> <span class="min">· CRUD y filtros</span></li>
+      <li><a href="#ej4"><strong>Requisito 4</strong> — El formulario en Vuex</a> <span class="min">· 422 contra 409</span></li>
+      <li><a href="#ej5"><strong>Requisito 5</strong> — El panel del encargado</a> <span class="min">· getters y /resumen</span></li>
+      <li><a href="#cierre">Cómo se revisa · Si terminas antes · Errores que te van a pasar</a></li>
+    </ol>
+  </nav>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="prep">
+  <h2>De dónde partes</h2>
+  <p class="meta"><strong>Antes de escribir una línea de Vue.</strong> Levanta el backend, crea el proyecto y <strong>recorre la API en Postman</strong>. Ese último paso no es opcional.</p>
+
+  <h3>Paso 1 — El backend</h3>
+
+  <span class="file file--term">Terminal · una pestaña sólo para esto</span>
+<pre><code>cd node-backend-edu
+npm install
+npm run dev
+
+# 🚀 Servidor corriendo en http://localhost:3001</code></pre>
+
+  <h3>Paso 2 — El proyecto</h3>
+
+  <span class="file file--term">Terminal · otra pestaña</span>
+<pre><code>npm create vite@latest panol -- --template vue
+cd panol
+npm install
+npm install vuex@4 vue-router@4 axios
+npm run dev</code></pre>
+
+  <h3>Paso 3 — Recorre la API antes de programar</h3>
+
+  <div class="nota">
+    <strong>Abre la colección de Postman y dispara estas cinco peticiones. En ese orden.</strong>
+    <p>
+      Vas a escribir código que consume estas respuestas. Si no sabes qué forma tienen, vas a programar a
+      ciegas y después vas a culpar al framework.
+    </p>
+  </div>
+
+  <span class="file file--term">Terminal · o su equivalente en Postman</span>
+<pre><code># 1. El catálogo. Mira el campo `disponibles`: NO está guardado, se calcula.
+curl -s http://localhost:3001/api/libre/equipos
+
+# 2. Un préstamo. Mira `atrasado` y `diasAtraso`: tampoco están guardados.
+curl -s http://localhost:3001/api/libre/prestamos/4
+
+# 3. La planilla. ¿Es un arreglo o un objeto? Averígualo antes de escribir el v-for.
+curl -s "http://localhost:3001/api/libre/prestamos?porPagina=3"
+
+# 4. Las cifras del pañol.
+curl -s http://localhost:3001/api/libre/prestamos/resumen
+
+# 5. Pide una cámara. Hay 3 y las 3 están fuera. Mira bien lo que responde.
+curl -s -X POST http://localhost:3001/api/libre/prestamos \
+  -H 'Content-Type: application/json' \
+  -d '{"equipoId":3,"solicitante":"Curso de Cine","area":"Audiovisual",
+       "cantidad":1,"fechaRetiro":"2026-08-10","fechaDevolucion":"2026-08-15"}'</code></pre>
+
+  <div class="alto">
+    <strong>Esa quinta petición es el ejercicio entero en una línea.</strong>
+    <p>
+      Todos los campos son válidos. El equipo existe, está operativo, las fechas son reales y están en
+      orden, la cantidad es razonable. <strong>Y el servidor la rechaza igual</strong>, con un
+      <code>409</code>, porque no queda ninguna cámara.
+    </p>
+    <p>
+      Ninguna validación que escribas en el navegador puede prevenir eso. Depende de lo que otras personas
+      pidieron antes que tú. Guárdate esa idea: la vas a necesitar en el Requisito 4.
+    </p>
+  </div>
+
+  <h3>La API que tienes disponible</h3>
+  <p>
+    Todo cuelga de <code>http://localhost:3001/api/libre</code>. <strong>No pide token</strong>: hoy el tema
+    es el manejo del estado, no la autenticación.
+  </p>
+
+  <h4>Equipos — catálogo de sólo lectura</h4>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Método y ruta</th><th>Para qué</th><th>Responde</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /equipos</code></td><td>Inventario completo</td><td><strong>Arreglo directo</strong></td></tr>
+        <tr><td><code>GET /equipos/categorias</code></td><td>Opciones del selector</td><td><code>{ categorias: [{ valor, etiqueta }] }</code></td></tr>
+        <tr><td><code>GET /equipos/:id</code></td><td>Un equipo</td><td>Objeto directo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Filtros de <code>GET /equipos</code>: <code>categoria</code>, <code>operativo</code> (true/false), <code>conStock</code> (true).</p>
+
+  <span class="file file--api">Forma de un equipo</span>
+<pre><code>{
+  "id": 1,
+  "nombre": "Notebook Lenovo ThinkPad",
+  "categoria": "computacion",
+  "marca": "Lenovo",
+  "stockTotal": 12,          // unidades que EXISTEN
+  "valorUnitario": 620000,
+  "operativo": true,         // si es false, no se puede prestar
+
+  // Estos DOS los calcula el servidor en cada consulta.
+  // No están guardados en ninguna parte.
+  "comprometidas": 9,        // unidades fuera del pañol ahora mismo
+  "disponibles": 3           // stockTotal - comprometidas
+}</code></pre>
+
+  <h4>Préstamos — el CRUD</h4>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Método y ruta</th><th>Para qué</th><th>Responde</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /prestamos</code></td><td>Planilla con filtros y paginación</td><td><code>{ datos, meta }</code></td></tr>
+        <tr><td><code>GET /prestamos/opciones</code></td><td>Estados y categorías</td><td><code>{ estados, estadosVivos, categorias }</code></td></tr>
+        <tr><td><code>GET /prestamos/resumen</code></td><td>Cifras del pañol</td><td>Objeto con agregaciones</td></tr>
+        <tr><td><code>GET /prestamos/:id</code></td><td>Un préstamo</td><td>Objeto directo</td></tr>
+        <tr><td><code>POST /prestamos</code></td><td>Registrar</td><td><code>201</code> + cabecera <code>Location</code></td></tr>
+        <tr><td><code>PUT /prestamos/:id</code></td><td>Reemplazo total</td><td>El préstamo</td></tr>
+        <tr><td><code>PATCH /prestamos/:id</code></td><td>Entregar o devolver</td><td>El préstamo</td></tr>
+        <tr><td><code>DELETE /prestamos/:id</code></td><td>Borrar</td><td><code>{ message, id }</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <span class="file file--api">Forma de un préstamo</span>
+<pre><code>{
+  "id": 4,
+  "codigo": "PR-0004",
+  "equipoId": 3,
+  "solicitante": "Marcelo Vera",
+  "area": "Registro Audiovisual",
+  "cantidad": 2,
+  "fechaRetiro": "2026-07-20",
+  "fechaDevolucion": "2026-07-31",
+  "estado": "entregado",          // pendiente | entregado | devuelto
+  "observacion": "Cobertura de la ceremonia.",
+  "creadoEn": "...",
+  "actualizadoEn": "...",
+
+  // Todo esto lo resuelve el servidor. Úsalo, no lo recalcules.
+  "equipoNombre": "Cámara de video",
+  "equipoCategoria": "audiovisual",
+  "atrasado": true,               // entregado y con la fecha vencida
+  "diasAtraso": 4,
+  "valorComprometido": 1780000    // valorUnitario x cantidad
+}</code></pre>
+
+  <p>Filtros de <code>GET /prestamos</code>:</p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Parámetro</th><th>Valores</th><th>Por defecto</th></tr></thead>
+      <tbody>
+        <tr><td><code>estado</code></td><td><code>pendiente</code> · <code>entregado</code> · <code>devuelto</code></td><td>—</td></tr>
+        <tr><td><code>equipoId</code></td><td>Id de un equipo existente</td><td>—</td></tr>
+        <tr><td><code>categoria</code></td><td>Una de las cinco categorías</td><td>—</td></tr>
+        <tr><td><code>atrasados</code></td><td><code>true</code> · <code>false</code></td><td>—</td></tr>
+        <tr><td><code>buscar</code></td><td>Solicitante, área, código o equipo</td><td>—</td></tr>
+        <tr><td><code>orden</code></td><td><code>recientes</code> · <code>solicitante</code> · <code>devolucion</code> · <code>cantidad</code></td><td><code>recientes</code></td></tr>
+        <tr><td><code>pagina</code> · <code>porPagina</code></td><td>Números. <code>porPagina</code> máximo 50</td><td><code>1</code> · <code>6</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Los tres estados y qué significan para el stock</h4>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Estado</th><th>Qué pasó</th><th>¿Ocupa unidades?</th></tr></thead>
+      <tbody>
+        <tr><td><code>pendiente</code></td><td>Reservado, todavía no lo retiran</td><td class="ok">Sí</td></tr>
+        <tr><td><code>entregado</code></td><td>Está en manos del solicitante</td><td class="ok">Sí</td></tr>
+        <tr><td><code>devuelto</code></td><td>Volvió al pañol</td><td class="no">No — libera el stock</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Validación — responde <code>422</code> con detalle por campo</h4>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Campo</th><th>Regla</th></tr></thead>
+      <tbody>
+        <tr><td><code>equipoId</code></td><td>Obligatorio. El equipo debe existir y estar <strong>operativo</strong></td></tr>
+        <tr><td><code>solicitante</code></td><td>Obligatorio, 3 a 60 caracteres</td></tr>
+        <tr><td><code>area</code></td><td>Obligatorio, mínimo 3 caracteres</td></tr>
+        <tr><td><code>cantidad</code></td><td>Entero entre 1 y 20</td></tr>
+        <tr><td><code>fechaRetiro</code></td><td>Obligatorio, <code>AAAA-MM-DD</code> y fecha real</td></tr>
+        <tr><td><code>fechaDevolucion</code></td><td>Obligatorio, y <strong>nunca anterior al retiro</strong></td></tr>
+        <tr><td><code>observacion</code></td><td>Opcional, máximo 200 caracteres</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Conflictos — responden <code>409</code></h4>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Situación</th><th>Cuerpo de la respuesta</th></tr></thead>
+      <tbody>
+        <tr><td>No alcanzan las unidades</td><td>Trae un objeto <code>stock</code> con <code>solicitadas</code>, <code>disponibles</code>, <code>comprometidas</code> y <code>stockTotal</code></td></tr>
+        <tr><td>Modificar un préstamo ya devuelto</td><td>Trae <code>estadoActual</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <span class="file file--api">El 409 por stock — mira lo que te devuelve</span>
+<pre><code>{
+  "message": "No hay unidades suficientes de Notebook Lenovo ThinkPad. Pediste 5 y sólo quedan 3.",
+  "stock": {
+    "equipo": "Notebook Lenovo ThinkPad",
+    "solicitadas": 5,
+    "disponibles": 3,
+    "comprometidas": 9,
+    "stockTotal": 12
+  }
+}</code></pre>
+
+  <div class="nota">
+    <strong>El servidor no sólo te dice que no. Te dice cuántas hay.</strong>
+    <p>
+      Con esos números puedes hacer que tu interfaz sea útil de verdad: en vez de un "error" seco, un
+      mensaje que ofrezca pedir las 3 que sí quedan. Eso está en los criterios de aceptación del
+      Requisito 4.
+    </p>
+  </div>
+
+  <h3>La hoja de estilos — cópiala y olvídate del diseño</h3>
+  <p>
+    Crea <code>src/estilos.css</code> con esto e impórtalo en <code>main.js</code> con
+    <code>import './estilos.css'</code>. Las clases están pensadas para el HTML que vas a escribir.
+  </p>
+
+  <span class="file">src/estilos.css</span>
+<pre><code>* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #f4f6f8;
+  color: #1c2530;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------- layout ---------- */
+.barra {
+  display: flex; align-items: center; gap: 1.5rem;
+  padding: 0 1.5rem; height: 60px;
+  background: #1f2d3a; color: #fff;
+  position: sticky; top: 0; z-index: 10;
+}
+.barra h1 { font-size: 1.05rem; margin: 0; white-space: nowrap; }
+.menu { display: flex; gap: .5rem; flex: 1; }
+.menu a {
+  color: #b9c7d4; text-decoration: none; padding: .5rem .9rem;
+  border-radius: 8px; font-weight: 600; font-size: .9rem;
+}
+.menu a:hover { background: rgba(255,255,255,.08); color: #fff; }
+.menu a.router-link-active { background: #2f8f66; color: #fff; }
+.contenido { max-width: 1100px; margin: 0 auto; padding: 1.75rem 1.5rem 4rem; }
+
+/* ---------- piezas ---------- */
+.tarjeta {
+  background: #fff; border: 1px solid #dfe6ec;
+  border-radius: 12px; padding: 1.1rem;
+}
+.grilla {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.cabecera {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.25rem;
+}
+.sub { margin: 0; color: #64748b; font-size: .88rem; }
+
+.btn {
+  background: #2f8f66; color: #fff; border: 0; border-radius: 8px;
+  padding: .55rem 1rem; font-weight: 600; font-size: .88rem;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  display: inline-block;
+}
+.btn:disabled { background: #9bb8ab; cursor: not-allowed; }
+.btn--gris { background: #94a3b8; }
+.btn--fino { padding: .25rem .55rem; font-size: .78rem; }
+
+.aviso {
+  background: #fff; border: 1px solid #dfe6ec; border-radius: 10px;
+  padding: 2rem; text-align: center; color: #64748b;
+}
+.aviso--error { background: #fdeceb; border-color: #f0b7b1; color: #96251a; }
+
+/* ---------- tabla ---------- */
+.tabla-caja {
+  background: #fff; border: 1px solid #dfe6ec;
+  border-radius: 10px; overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; font-size: .87rem; min-width: 760px; }
+th, td { padding: .65rem .85rem; text-align: left; border-bottom: 1px solid #eef2f6; }
+th {
+  background: #f7f9fb; font-size: .73rem; text-transform: uppercase;
+  letter-spacing: .04em; color: #64748b;
+}
+tbody tr:last-child td { border-bottom: 0; }
+tr.ocupada { opacity: .5; pointer-events: none; }
+tr.atrasada { background: #fdf5f4; }
+td small { display: block; color: #94a3b8; font-size: .76rem; }
+.mono { font-family: ui-monospace, Menlo, monospace; font-size: .8rem; color: #64748b; }
+
+/* ---------- etiquetas de estado ---------- */
+.chip {
+  font-size: .73rem; font-weight: 700; padding: .18rem .55rem;
+  border-radius: 999px; text-transform: capitalize; display: inline-block;
+}
+.chip--pendiente { background: #fdf3e4; color: #96590c; }
+.chip--entregado { background: #e9f1fb; color: #2a6fc9; }
+.chip--devuelto  { background: #e9f6f0; color: #2f8f66; }
+.chip--atraso    { background: #fdeceb; color: #c0392b; }
+
+/* ---------- formulario ---------- */
+.form { display: flex; flex-direction: column; gap: 1rem; max-width: 640px; }
+.fila { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+label { display: flex; flex-direction: column; gap: .35rem; }
+label > span { font-size: .82rem; font-weight: 700; color: #475569; }
+input, select, textarea {
+  padding: .55rem .7rem; border: 1px solid #cfd9e2; border-radius: 8px;
+  font-size: .92rem; font-family: inherit; background: #fff;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid #42b883; outline-offset: 1px; border-color: #42b883;
+}
+.malo { border-color: #c0392b; background: #fdf5f4; }
+.malo-txt { color: #c0392b; font-size: .79rem; font-weight: 600; }
+
+/* La caja del 409. Distinta a propósito de los errores de campo. */
+.conflicto {
+  background: #fdf3e4; border: 1px solid #e8c98a; border-left: 4px solid #c47a1b;
+  border-radius: 0 8px 8px 0; padding: .9rem 1.1rem; margin-bottom: 1.25rem;
+}
+.conflicto strong { color: #96590c; display: block; margin-bottom: .25rem; }
+.conflicto p { margin: .2rem 0 0; font-size: .88rem; color: #7a4e0d; }
+
+/* ---------- panel ---------- */
+.cifras {
+  display: grid; gap: .9rem; margin-bottom: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.cifra {
+  background: #fff; border: 1px solid #dfe6ec; border-left: 4px solid #94a3b8;
+  border-radius: 10px; padding: 1rem 1.1rem; display: flex; flex-direction: column;
+}
+.cifra--bien { border-left-color: #2f8f66; }
+.cifra--aviso { border-left-color: #c47a1b; }
+.cifra--malo { border-left-color: #c0392b; }
+.cifra .valor { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+.cifra .rotulo {
+  font-size: .78rem; text-transform: uppercase;
+  letter-spacing: .05em; color: #64748b;
+}
+
+/* Barra de uso para el panel */
+.riel { background: #eef2f6; border-radius: 999px; height: .65rem; overflow: hidden; }
+.riel i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #42b883, #2f8f66);
+}
+.riel--lleno i { background: linear-gradient(90deg, #e8a33d, #c0392b); }
+
+.filtros {
+  display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1.1rem;
+  padding: .85rem; background: #fff; border: 1px solid #dfe6ec; border-radius: 10px;
+}
+.filtros input, .filtros select { font-size: .86rem; padding: .45rem .65rem; }
+.filtros input[type="search"] { flex: 1; min-width: 190px; }
+
+@media (max-width: 640px) {
+  .fila { grid-template-columns: 1fr; }
+}</code></pre>
+
+  <h3>Mapa de clases — qué clase va en qué elemento</h3>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Clase</th><th>Va en</th><th>Para qué</th></tr></thead>
+      <tbody>
+        <tr><td><code>.barra</code> · <code>.menu</code></td><td><code>&lt;header&gt;</code> y <code>&lt;nav&gt;</code> de <code>App.vue</code></td><td>La navegación superior</td></tr>
+        <tr><td><code>.contenido</code></td><td><code>&lt;main&gt;</code> que envuelve el <code>&lt;router-view&gt;</code></td><td>Centra y limita el ancho</td></tr>
+        <tr><td><code>.cabecera</code> · <code>.sub</code></td><td><code>&lt;header&gt;</code> de cada vista</td><td>Título a la izquierda, botón a la derecha</td></tr>
+        <tr><td><code>.grilla</code> + <code>.tarjeta</code></td><td>Contenedor y cada tarjeta</td><td>Rejilla que se acomoda sola</td></tr>
+        <tr><td><code>.tabla-caja</code></td><td><code>&lt;div&gt;</code> que envuelve la <code>&lt;table&gt;</code></td><td>Borde, esquinas y scroll horizontal</td></tr>
+        <tr><td><code>.chip</code> + <code>.chip--pendiente</code> · <code>--entregado</code> · <code>--devuelto</code></td><td><code>&lt;span&gt;</code></td><td>La píldora de estado. Hay una por estado</td></tr>
+        <tr><td><code>.chip--atraso</code></td><td><code>&lt;span class="chip"&gt;</code></td><td>El aviso rojo de atraso</td></tr>
+        <tr><td><code>.ocupada</code></td><td><code>&lt;tr&gt;</code></td><td>Apaga la fila que espera al servidor</td></tr>
+        <tr><td><code>.atrasada</code></td><td><code>&lt;tr&gt;</code></td><td>Fondo rojizo en las filas vencidas</td></tr>
+        <tr><td><code>.filtros</code></td><td><code>&lt;div&gt;</code> con los inputs y selects</td><td>La barra de filtros</td></tr>
+        <tr><td><code>.form</code> · <code>.fila</code></td><td><code>&lt;form&gt;</code> y grupos de dos campos</td><td>Una columna; <code>.fila</code> pone dos lado a lado</td></tr>
+        <tr><td><code>.malo</code> · <code>.malo-txt</code></td><td>El <code>&lt;input&gt;</code> y el <code>&lt;small&gt;</code> de abajo</td><td>El campo que el <strong>422</strong> marcó</td></tr>
+        <tr><td><code>.conflicto</code></td><td><code>&lt;div&gt;</code> arriba del formulario</td><td>La caja del <strong>409</strong>. Separada a propósito</td></tr>
+        <tr><td><code>.cifras</code> + <code>.cifra</code></td><td>Rejilla y tarjeta del panel</td><td>Los números grandes</td></tr>
+        <tr><td><code>.cifra--bien</code> · <code>--aviso</code> · <code>--malo</code></td><td>Modificador de <code>.cifra</code></td><td>El color del borde izquierdo</td></tr>
+        <tr><td><code>.riel</code> + <code>&lt;i&gt;</code> dentro</td><td>Barra de progreso</td><td>El ancho del <code>&lt;i&gt;</code> se pone por <code>style</code></td></tr>
+        <tr><td><code>.riel--lleno</code></td><td>Modificador de <code>.riel</code></td><td>Pinta la barra en rojo</td></tr>
+        <tr><td><code>.aviso</code> · <code>.aviso--error</code></td><td><code>&lt;div&gt;</code> centrado</td><td>Estados de carga, vacío y error</td></tr>
+        <tr><td><code>.btn</code> · <code>--gris</code> · <code>--fino</code></td><td>Botones y <code>&lt;router-link&gt;</code></td><td>Funciona igual en los dos</td></tr>
+        <tr><td><code>.mono</code></td><td><code>&lt;td&gt;</code> del código</td><td>Tipografía monoespaciada</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nota">
+    <strong>Cómo usar las maquetas que vienen más abajo.</strong>
+    <p>
+      En cada requisito hay una <strong>maqueta estática</strong>: HTML plano, con datos escritos a mano y
+      las clases ya puestas. Puedes abrirla en el navegador tal cual y ver cómo queda.
+    </p>
+    <p>
+      Tu trabajo es <strong>convertirla en un componente Vue</strong>: decidir qué se repite, qué aparece
+      sólo a veces, qué clase depende de un dato, qué botón despacha qué. Esa conversión <em>es</em> el
+      ejercicio. La maqueta te ahorra el CSS, no el pensamiento.
+    </p>
+    <p>
+      Los datos que aparecen escritos ("PR-0004", "Camila Rojas") son de muestra. Ninguno debe quedar
+      escrito a mano en tu entrega.
+    </p>
+  </div>
+
+  <div class="check">
+    <h4>Antes de pasar al Requisito 1</h4>
+    <ul>
+      <li>El backend responde en el 3001</li>
+      <li>El proyecto Vue levanta en el 5173</li>
+      <li><code>vuex</code>, <code>vue-router</code> y <code>axios</code> instalados</li>
+      <li>Disparaste las cinco peticiones y <strong>viste con tus ojos</strong> qué devuelve cada una</li>
+      <li>Sabes por qué la quinta responde 409 aunque todos los campos son válidos</li>
+      <li><code>src/estilos.css</code> creado e importado</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="ej1">
+  <h2>Requisito 1 — Las cuatro pantallas y su navegación</h2>
+  <p class="meta"><strong>Entregable:</strong> <code>src/router/index.js</code>, <code>src/App.vue</code> y cuatro vistas vacías. · <strong>Sin Vuex todavía.</strong></p>
+
+  <h3>Qué se necesita</h3>
+  <p>
+    La aplicación del mesón tiene cuatro pantallas. Antes de traer un solo dato, tienen que estar
+    navegables:
+  </p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Ruta</th><th>Nombre</th><th>Vista</th><th>Para qué</th></tr></thead>
+      <tbody>
+        <tr><td><code>/</code></td><td><code>panel</code></td><td><code>PanelView.vue</code></td><td>Cifras del pañol</td></tr>
+        <tr><td><code>/prestamos</code></td><td><code>prestamos</code></td><td><code>PrestamosView.vue</code></td><td>Planilla con filtros</td></tr>
+        <tr><td><code>/prestamos/nuevo</code></td><td><code>prestamo-nuevo</code></td><td><code>PrestamoFormView.vue</code></td><td>Registrar</td></tr>
+        <tr><td><code>/prestamos/:id</code></td><td><code>prestamo-editar</code></td><td><code>PrestamoFormView.vue</code></td><td>Editar</td></tr>
+        <tr><td><code>/inventario</code></td><td><code>inventario</code></td><td><code>InventarioView.vue</code></td><td>Catálogo de equipos</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Criterios de aceptación</h3>
+
+  <div class="check">
+    <h4>Se revisa esto, uno por uno</h4>
+    <ul>
+      <li>Existe <code>src/router/index.js</code> y está enchufado en <code>main.js</code> con <code>.use(router)</code></li>
+      <li>Las cinco rutas tienen <code>name</code>. Ningún <code>router-link</code> usa <code>to="/ruta"</code>: todos usan <code>:to="{ name: '...' }"</code></li>
+      <li><code>/prestamos/nuevo</code> está declarada <strong>antes</strong> que <code>/prestamos/:id</code></li>
+      <li><code>/prestamos/:id</code> usa <code>props: true</code> y el componente recibe <code>id</code> como <strong>prop</strong>, no con <code>useRoute()</code></li>
+      <li><code>PrestamoFormView.vue</code> se carga con <code>() =&gt; import(...)</code>. En la pestaña Network se ve que su JS llega en un archivo aparte y sólo al entrar a esa ruta</li>
+      <li>Hay una ruta comodín que redirige al panel</li>
+      <li><code>App.vue</code> tiene la barra de navegación y un <code>&lt;router-view /&gt;</code>, y <strong>ninguna lógica de negocio</strong></li>
+      <li>El enlace de la sección activa se marca solo, <strong>sin ningún <code>ref</code> que lleve la cuenta</strong></li>
+      <li>Navegar entre pantallas <strong>no recarga la página</strong></li>
+    </ul>
+  </div>
+
+  <div class="alto">
+    <strong>El error que te va a pasar, y te lo estoy avisando ahora.</strong>
+    <p>
+      Si declaras <code>/prestamos/:id</code> antes que <code>/prestamos/nuevo</code>, al entrar al
+      formulario de creación el router va a capturar el texto <code>"nuevo"</code> como si fuera un id.
+      Vas a pedirle al servidor el préstamo <code>"nuevo"</code>, vas a recibir un <strong>404</strong> y
+      vas a revisar el backend durante veinte minutos buscando un problema que está en tu router.
+    </p>
+    <p>
+      La regla: <strong>lo específico antes que lo genérico.</strong>
+    </p>
+  </div>
+
+  <div class="ojo">
+    <strong>Pista sobre la clase del enlace activo.</strong>
+    <p>
+      Vue Router le pone solo la clase <code>router-link-active</code> al enlace de la ruta en la que
+      estás. Ya está en la hoja de estilos que copiaste. Si escribiste un <code>ref</code> llamado
+      <code>pestanaActiva</code>, bórralo: estás replicando información que el router ya tiene.
+    </p>
+  </div>
+  <h3>La maqueta de la pantalla</h3>
+  <p>
+    Éste es el marco de la aplicación en HTML plano. Cópialo dentro del
+    <code>&lt;template&gt;</code> de <code>App.vue</code> y adáptalo.
+  </p>
+
+  <span class="file file--maqueta">maqueta-layout.html</span>
+<pre><code>&lt;header class="barra"&gt;
+  &lt;h1&gt;🧰 El Pañol&lt;/h1&gt;
+
+  &lt;nav class="menu"&gt;
+    &lt;a href="#"&gt;Panel&lt;/a&gt;
+    &lt;a href="#"&gt;Préstamos&lt;/a&gt;
+    &lt;a href="#"&gt;Inventario&lt;/a&gt;
+  &lt;/nav&gt;
+
+  &lt;a href="#" class="btn"&gt;+ Registrar préstamo&lt;/a&gt;
+&lt;/header&gt;
+
+&lt;main class="contenido"&gt;
+  &lt;!-- Acá se pinta la vista de la ruta actual --&gt;
+&lt;/main&gt;</code></pre>
+
+  <div class="ojo">
+    <strong>Lo que tienes que resolver en esta maqueta.</strong>
+    <p>
+      Esos cuatro <code>&lt;a href="#"&gt;</code> <strong>no pueden quedar así</strong>: un
+      <code>&lt;a&gt;</code> normal recarga la página entera y mata la SPA. Averigua con qué se reemplazan
+      y cómo se apunta a una ruta <em>por su nombre</em>.
+    </p>
+    <p>
+      El <code>&lt;main&gt;</code> está vacío a propósito. Falta el elemento donde el router pinta la vista.
+    </p>
+    <p>
+      Y la clase que marca el enlace activo <strong>no la escribes tú</strong>: ya está en
+      <code>estilos.css</code> y alguien te la va a poner sola. Averigua quién.
+    </p>
+  </div>
+
+
+</section>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="ej2">
+  <h2>Requisito 2 — El inventario: tu primer módulo</h2>
+  <p class="meta"><strong>Entregable:</strong> <code>src/api/http.js</code>, <code>src/store/index.js</code>, <code>src/store/modules/equipos.js</code> y <code>InventarioView.vue</code>.</p>
+
+  <h3>Qué se necesita</h3>
+  <p>
+    La pantalla <code>/inventario</code> muestra todos los equipos en tarjetas. Cada tarjeta indica el
+    nombre, la marca, la categoría, y —lo importante— <strong>cuántas unidades hay disponibles de cuántas
+    existen</strong>. Los equipos en mantención se ven apagados y con una etiqueta.
+  </p>
+  <p>
+    Ahora, la pregunta que define este requisito: <strong>¿quién más necesita esta lista?</strong>
+  </p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Pantalla</th><th>Para qué necesita los equipos</th></tr></thead>
+      <tbody>
+        <tr><td><code>/inventario</code></td><td>Mostrar las tarjetas</td></tr>
+        <tr><td><code>/prestamos/nuevo</code></td><td>Poblar el <code>&lt;select&gt;</code> y avisar cuántas quedan</td></tr>
+        <tr><td><code>/prestamos</code></td><td>Filtrar la planilla por equipo</td></tr>
+        <tr><td><code>/</code></td><td>Mostrar el uso del inventario</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nota">
+    <strong>Cuatro pantallas, el mismo dato.</strong>
+    <p>
+      Ahí es cuando un dato deja de pertenecer al componente y pasa a pertenecer a la aplicación. Y lo que
+      pertenece a la aplicación vive en el store. Ése es el criterio, no "es una lista, la pongo en Vuex".
+    </p>
+  </div>
+
+  <h3>Criterios de aceptación</h3>
+
+  <div class="check">
+    <h4>La instancia de axios</h4>
+    <ul>
+      <li>Existe <code>src/api/http.js</code> con <strong>una sola</strong> instancia creada con <code>axios.create()</code></li>
+      <li>La URL del backend aparece <strong>exactamente una vez</strong> en todo el proyecto</li>
+      <li>Hay un interceptor de respuesta que normaliza los errores. Todas tus actions deben recibir siempre la misma forma, algo como <code>{ estado, mensaje, errores, stock }</code></li>
+      <li>El interceptor distingue "el servidor respondió con error" de "nunca hubo respuesta". Apaga el backend y comprueba que el mensaje es distinto</li>
+    </ul>
+  </div>
+
+  <div class="check">
+    <h4>El store y el módulo</h4>
+    <ul>
+      <li><code>src/store/index.js</code> <strong>sólo ensambla módulos</strong>. No tiene state, ni mutations, ni datos propios</li>
+      <li>Tiene <code>strict: import.meta.env.DEV</code></li>
+      <li>El módulo <code>equipos</code> tiene <code>namespaced: true</code></li>
+      <li><code>state</code> es una <strong>función</strong> que devuelve un objeto, no un objeto</li>
+      <li>El state guarda al menos: la lista, un indicador de carga y un mensaje de error</li>
+      <li><strong>axios aparece únicamente dentro de una action.</strong> Ni un import de axios en un componente</li>
+      <li>Ninguna mutation tiene un <code>await</code></li>
+      <li>Ninguna action asigna directamente al state: todas usan <code>commit</code></li>
+      <li>La action <strong>no vuelve a pedir el catálogo si ya lo tiene</strong>, salvo que se le pida forzar</li>
+      <li>Hay al menos tres getters. Uno de ellos debe devolver un <strong>índice</strong> <code>id → equipo</code> para no andar haciendo <code>.find()</code> en cada fila de una tabla</li>
+    </ul>
+  </div>
+
+  <div class="check">
+    <h4>La vista</h4>
+    <ul>
+      <li>Maneja <strong>cuatro</strong> estados: cargando, error, vacío y con datos. No dos</li>
+      <li>El estado vacío no dice "cargando…" para siempre</li>
+      <li>Cuando hay error hay un botón para reintentar</li>
+      <li>Hay un botón "Recargar" que fuerza la petición</li>
+      <li>Ir a otra pantalla y volver <strong>no dispara una segunda petición</strong>. Compruébalo en la pestaña Network</li>
+    </ul>
+  </div>
+
+  <div class="ojo">
+    <strong>Sobre el namespace, que es donde todos se caen.</strong>
+    <p>
+      El <code>state</code> se anida como objeto y los <code>getters</code>, <code>actions</code> y
+      <code>mutations</code> se registran con una clave de texto. La sintaxis no es simétrica y confunde el
+      primer día:
+    </p>
+    <p>
+      <code>store.state.equipos.lista</code> lleva <strong>punto</strong>.<br>
+      <code>store.getters['equipos/disponibles']</code> lleva <strong>barra y corchetes</strong>.
+    </p>
+    <p>
+      Y ojo: <code>dispatch('cargar')</code> sin el prefijo <strong>no hace nada y no avisa</strong>. Vuex
+      busca una action global con ese nombre, no la encuentra y se queda callado. Tu pantalla queda vacía
+      sin un solo error en consola.
+    </p>
+  </div>
+  <h3>La maqueta de la pantalla</h3>
+  <p>
+    Dos tarjetas de muestra, con las clases puestas. Una de un equipo con unidades libres y otra de uno
+    en mantención, para que veas los dos casos.
+  </p>
+
+  <span class="file file--maqueta">maqueta-inventario.html</span>
+<pre><code>&lt;section&gt;
+  &lt;header class="cabecera"&gt;
+    &lt;div&gt;
+      &lt;h2&gt;Inventario&lt;/h2&gt;
+      &lt;p class="sub"&gt;8 equipos · 6 con unidades disponibles&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;button class="btn"&gt;Recargar&lt;/button&gt;
+  &lt;/header&gt;
+
+  &lt;div class="grilla"&gt;
+
+    &lt;article class="tarjeta"&gt;
+      &lt;h3&gt;Notebook Lenovo ThinkPad&lt;/h3&gt;
+      &lt;p class="sub"&gt;Lenovo · Computación&lt;/p&gt;
+
+      &lt;p class="sub" style="margin-top:.75rem"&gt;
+        &lt;strong&gt;3&lt;/strong&gt; de 12 disponibles
+      &lt;/p&gt;
+      &lt;span class="riel"&gt;
+        &lt;i style="width: 75%"&gt;&lt;/i&gt;
+      &lt;/span&gt;
+
+      &lt;p class="sub" style="margin-top:.75rem"&gt;$620.000 por unidad&lt;/p&gt;
+    &lt;/article&gt;
+
+    &lt;article class="tarjeta" style="opacity:.6"&gt;
+      &lt;h3&gt;Osciloscopio&lt;/h3&gt;
+      &lt;p class="sub"&gt;Rigol · Medición&lt;/p&gt;
+
+      &lt;p class="sub" style="margin-top:.75rem"&gt;
+        &lt;strong&gt;2&lt;/strong&gt; de 2 disponibles
+      &lt;/p&gt;
+      &lt;span class="riel riel--lleno"&gt;
+        &lt;i style="width: 0%"&gt;&lt;/i&gt;
+      &lt;/span&gt;
+
+      &lt;p class="sub" style="margin-top:.75rem"&gt;$540.000 por unidad&lt;/p&gt;
+
+      &lt;p style="margin:.5rem 0 0"&gt;
+        &lt;span class="chip chip--atraso"&gt;En mantención&lt;/span&gt;
+      &lt;/p&gt;
+    &lt;/article&gt;
+
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+
+  <p>Y las tres cajas de aviso, para los estados que no son "hay datos":</p>
+
+  <span class="file file--maqueta">maqueta-avisos.html</span>
+<pre><code>&lt;div class="aviso"&gt;Consultando el inventario…&lt;/div&gt;
+
+&lt;div class="aviso aviso--error"&gt;
+  No se pudo contactar al servidor.
+  &lt;button class="btn btn--fino"&gt;Reintentar&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;div class="aviso"&gt;No hay equipos registrados.&lt;/div&gt;</code></pre>
+
+  <div class="ojo">
+    <strong>Lo que tienes que resolver en esta maqueta.</strong>
+    <ul>
+      <li>Hay <strong>dos</strong> tarjetas escritas a mano y en la realidad son ocho. ¿Qué directiva las genera? ¿Qué le tienes que pasar además del dato?</li>
+      <li>El <code>style="width: 75%"</code> del riel está calculado a mano. En tu versión ese número sale de dos campos del equipo. Piensa cuáles y cómo se enlaza un estilo.</li>
+      <li>La segunda tarjeta lleva <code>opacity:.6</code>, la clase <code>riel--lleno</code> y una píldora. Las tres cosas dependen de <strong>condiciones distintas</strong>: una del campo <code>operativo</code> y las otras de <code>disponibles</code>. Averigua cómo se pone una clase sólo cuando se cumple algo.</li>
+      <li>Las tres cajas de aviso y la grilla son <strong>excluyentes</strong>: nunca se ven dos a la vez. ¿Con qué familia de directivas se encadenan?</li>
+      <li>El texto "6 con unidades disponibles" no debe calcularse en el template.</li>
+    </ul>
+  </div>
+
+  <div class="nota">
+    <strong>Una ayuda que sí te doy, porque es presentación y no estado.</strong>
+    <p>
+      Para el precio y el nombre legible de la categoría, mete esto en tu <code>&lt;script setup&gt;</code>:
+    </p>
+  </div>
+
+  <span class="file file--bien">Ayudantes de presentación — cópialos</span>
+<pre><code>const pesos = (v) =&gt;
+  v.toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 })
+
+const etiquetas = {
+  computacion: 'Computación',
+  audiovisual: 'Audiovisual',
+  redes: 'Redes',
+  medicion: 'Medición',
+  mobiliario: 'Mobiliario'
+}</code></pre>
+
+
+</section>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="ej3">
+  <h2>Requisito 3 — La planilla: tu segundo módulo</h2>
+  <p class="meta"><strong>Entregable:</strong> <code>src/store/modules/prestamos.js</code> y <code>PrestamosView.vue</code>.</p>
+
+  <h3>Qué se necesita</h3>
+  <p>
+    La pantalla <code>/prestamos</code> es la herramienta del mesón. Muestra una tabla paginada con todos
+    los préstamos y deja hacer el trabajo del día:
+  </p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Acción</th><th>Cómo se hace contra la API</th></tr></thead>
+      <tbody>
+        <tr><td>Marcar que retiraron el equipo</td><td><code>PATCH { "estado": "entregado" }</code></td></tr>
+        <tr><td>Marcar que lo devolvieron</td><td><code>PATCH { "estado": "devuelto" }</code></td></tr>
+        <tr><td>Editar un préstamo</td><td>Navegar a <code>/prestamos/:id</code></td></tr>
+        <tr><td>Borrar un registro</td><td><code>DELETE</code>, con confirmación previa</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Y filtrar por: texto libre, estado, equipo, categoría y <strong>sólo atrasados</strong>.</p>
+
+  <div class="vivo">
+    <strong>¿Por qué un módulo nuevo y no meter esto en <code>equipos</code>?</strong>
+    <p>
+      Porque son <strong>dos ciclos de vida distintos</strong>. El inventario se pide una vez y se queda
+      quieto. Los préstamos cambian a cada rato: se crean, se entregan, se devuelven, se filtran, se
+      paginan. Tienen su propio estado de carga, su propio error, sus propios filtros.
+    </p>
+    <p>
+      Meterlos juntos los obligaría a compartir un <code>cargando</code> que significa cosas distintas
+      para cada uno. <strong>Dos ciclos de vida, dos módulos.</strong> Ésa es la regla, no el tamaño del
+      archivo.
+    </p>
+  </div>
+
+  <h3>Criterios de aceptación</h3>
+
+  <div class="check">
+    <h4>El módulo</h4>
+    <ul>
+      <li><code>namespaced: true</code> y <code>state</code> como función</li>
+      <li><strong>Los filtros viven en el state</strong>, no en <code>ref</code> del componente. Se comprueba así: filtra por "atrasados", ándate al panel, vuelve — <strong>el filtro sigue puesto</strong></li>
+      <li>La <code>meta</code> de paginación se guarda <strong>tal como llega del servidor</strong>. No la recalcules</li>
+      <li>Cambiar cualquier filtro <strong>vuelve a la página 1</strong></li>
+      <li>Los filtros vacíos <strong>no se envían</strong> como parámetro. Mandar <code>estado=""</code> te va a devolver un <code>400</code></li>
+      <li>Entregar o devolver <strong>no recarga la lista completa</strong>. El servidor ya te devolvió el préstamo actualizado en la respuesta del PATCH: úsalo para reemplazar esa fila</li>
+      <li>Hay un estado que indica <strong>qué fila</strong> está esperando al servidor, y se deshabilita sólo esa fila, no la tabla entera</li>
+      <li>Ese indicador se limpia también cuando la petición <strong>falla</strong>. Pista: <code>finally</code></li>
+      <li>Si borras el último registro de una página, la vista <strong>no queda en blanco</strong></li>
+    </ul>
+  </div>
+
+  <div class="check">
+    <h4>La tabla</h4>
+    <ul>
+      <li>Muestra código, solicitante con su área, equipo, cantidad, fechas y estado</li>
+      <li>Las filas atrasadas se distinguen visualmente y muestran <strong>cuántos días</strong> llevan</li>
+      <li>Usas <code>equipoNombre</code> y <code>atrasado</code> que ya vienen resueltos. <strong>No los recalcules en el cliente</strong></li>
+      <li>Los botones de acción aparecen según el estado: no ofrezcas "Devolver" en algo que ya está devuelto</li>
+      <li>El <code>DELETE</code> pide confirmación</li>
+      <li>Hay paginación con Anterior y Siguiente, deshabilitados en los extremos</li>
+      <li>El selector de filtro por equipo se alimenta del <strong>módulo <code>equipos</code></strong></li>
+      <li>Estado vacío distinto según haya filtros puestos o no: "nada calza con esos filtros" no es lo mismo que "todavía no hay préstamos"</li>
+    </ul>
+  </div>
+
+  <div class="alto">
+    <strong>No uses <code>v-model</code> sobre los filtros del store.</strong>
+    <p>
+      <code>v-model</code> escribe directo sobre lo que le des. Contra el state de Vuex eso es exactamente
+      lo que <code>strict</code> prohíbe, y te vas a llevar un
+      <em>"Do not mutate vuex store state outside mutation handlers"</em> en la consola.
+    </p>
+    <p>
+      Se lee con <code>:value</code> y se escribe con <code>@input</code> o <code>@change</code>
+      despachando la action. Sí, es más largo.
+    </p>
+  </div>
+
+  <div class="ojo">
+    <strong>Cuándo un módulo necesita al otro, y cuándo no.</strong>
+    <p>
+      La <strong>tabla</strong> no necesita el módulo <code>equipos</code>: el backend ya manda
+      <code>equipoNombre</code> resuelto en cada fila. Úsalo y no cruces nada.
+    </p>
+    <p>
+      El <strong>selector del filtro</strong> sí lo necesita, porque hacen falta <em>todos</em> los
+      equipos, no sólo los que aparecen en la página actual.
+    </p>
+    <p>
+      La forma más limpia de comunicar dos módulos es <strong>no comunicarlos</strong>. La segunda es que
+      el componente lea de los dos. Sólo si eso no alcanza se usa <code>rootGetters</code> o
+      <code>dispatch(nombre, null, { root: true })</code> — y ojo con ese <code>null</code>, que es el
+      payload: si lo omites, Vuex interpreta <code>{ root: true }</code> como el payload y la llamada no
+      hace nada. Sin error.
+    </p>
+  </div>
+  <h3>La maqueta de la pantalla</h3>
+  <p>
+    Tres filas de muestra: una pendiente, una entregada y atrasada, y una devuelta. Fíjate en que cada
+    una tiene un juego de botones distinto.
+  </p>
+
+  <span class="file file--maqueta">maqueta-planilla.html</span>
+<pre><code>&lt;section&gt;
+  &lt;header class="cabecera"&gt;
+    &lt;div&gt;
+      &lt;h2&gt;Préstamos&lt;/h2&gt;
+      &lt;p class="sub"&gt;Mostrando 6 de 15&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;a href="#" class="btn"&gt;+ Registrar&lt;/a&gt;
+  &lt;/header&gt;
+
+  &lt;div class="filtros"&gt;
+    &lt;input type="search" placeholder="Buscar por solicitante, área o código…"&gt;
+
+    &lt;select&gt;
+      &lt;option value=""&gt;Todos los estados&lt;/option&gt;
+      &lt;option value="pendiente"&gt;Pendientes&lt;/option&gt;
+      &lt;option value="entregado"&gt;Entregados&lt;/option&gt;
+      &lt;option value="devuelto"&gt;Devueltos&lt;/option&gt;
+    &lt;/select&gt;
+
+    &lt;select&gt;
+      &lt;option value=""&gt;Todos los equipos&lt;/option&gt;
+      &lt;option&gt;Notebook Lenovo ThinkPad&lt;/option&gt;
+    &lt;/select&gt;
+
+    &lt;select&gt;
+      &lt;option value=""&gt;Atrasados y al día&lt;/option&gt;
+      &lt;option value="true"&gt;Sólo atrasados&lt;/option&gt;
+      &lt;option value="false"&gt;Sólo al día&lt;/option&gt;
+    &lt;/select&gt;
+
+    &lt;button class="btn btn--gris"&gt;Limpiar&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;div class="tabla-caja"&gt;
+    &lt;table&gt;
+      &lt;thead&gt;
+        &lt;tr&gt;
+          &lt;th&gt;Código&lt;/th&gt;&lt;th&gt;Solicitante&lt;/th&gt;&lt;th&gt;Equipo&lt;/th&gt;
+          &lt;th&gt;Cant.&lt;/th&gt;&lt;th&gt;Devolución&lt;/th&gt;&lt;th&gt;Estado&lt;/th&gt;&lt;th&gt;&lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+
+        &lt;tr&gt;
+          &lt;td class="mono"&gt;PR-0003&lt;/td&gt;
+          &lt;td&gt;
+            &lt;strong&gt;Andrea Bouffanais&lt;/strong&gt;
+            &lt;small&gt;Charla de Titulación&lt;/small&gt;
+          &lt;/td&gt;
+          &lt;td&gt;Proyector portátil&lt;/td&gt;
+          &lt;td&gt;2&lt;/td&gt;
+          &lt;td&gt;7 ago&lt;/td&gt;
+          &lt;td&gt;&lt;span class="chip chip--pendiente"&gt;pendiente&lt;/span&gt;&lt;/td&gt;
+          &lt;td style="white-space:nowrap"&gt;
+            &lt;button class="btn btn--fino"&gt;Entregar&lt;/button&gt;
+            &lt;a href="#" class="btn btn--fino btn--gris"&gt;Editar&lt;/a&gt;
+            &lt;button class="btn btn--fino btn--gris"&gt;Eliminar&lt;/button&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+
+        &lt;tr class="atrasada"&gt;
+          &lt;td class="mono"&gt;PR-0004&lt;/td&gt;
+          &lt;td&gt;
+            &lt;strong&gt;Marcelo Vera&lt;/strong&gt;
+            &lt;small&gt;Registro Audiovisual&lt;/small&gt;
+          &lt;/td&gt;
+          &lt;td&gt;Cámara de video&lt;/td&gt;
+          &lt;td&gt;2&lt;/td&gt;
+          &lt;td&gt;
+            31 jul
+            &lt;small&gt;4 días de atraso&lt;/small&gt;
+          &lt;/td&gt;
+          &lt;td&gt;
+            &lt;span class="chip chip--entregado"&gt;entregado&lt;/span&gt;
+            &lt;span class="chip chip--atraso"&gt;Atrasado&lt;/span&gt;
+          &lt;/td&gt;
+          &lt;td style="white-space:nowrap"&gt;
+            &lt;button class="btn btn--fino"&gt;Devolver&lt;/button&gt;
+            &lt;a href="#" class="btn btn--fino btn--gris"&gt;Editar&lt;/a&gt;
+            &lt;button class="btn btn--fino btn--gris"&gt;Eliminar&lt;/button&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+
+        &lt;tr&gt;
+          &lt;td class="mono"&gt;PR-0006&lt;/td&gt;
+          &lt;td&gt;
+            &lt;strong&gt;Ignacio Soto&lt;/strong&gt;
+            &lt;small&gt;Laboratorio de Redes&lt;/small&gt;
+          &lt;/td&gt;
+          &lt;td&gt;Router configurable&lt;/td&gt;
+          &lt;td&gt;6&lt;/td&gt;
+          &lt;td&gt;29 jul&lt;/td&gt;
+          &lt;td&gt;&lt;span class="chip chip--devuelto"&gt;devuelto&lt;/span&gt;&lt;/td&gt;
+          &lt;td style="white-space:nowrap"&gt;
+            &lt;button class="btn btn--fino btn--gris"&gt;Eliminar&lt;/button&gt;
+          &lt;/td&gt;
+        &lt;/tr&gt;
+
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/div&gt;
+
+  &lt;nav class="cabecera" style="margin-top:1rem;justify-content:center;gap:1rem"&gt;
+    &lt;button class="btn btn--gris"&gt;← Anterior&lt;/button&gt;
+    &lt;span class="sub"&gt;Página 1 de 3&lt;/span&gt;
+    &lt;button class="btn btn--gris"&gt;Siguiente →&lt;/button&gt;
+  &lt;/nav&gt;
+&lt;/section&gt;</code></pre>
+
+  <div class="ojo">
+    <strong>Lo que tienes que resolver en esta maqueta.</strong>
+    <ul>
+      <li>Las tres filas son <strong>una sola</strong> repetida. Compáralas para descubrir qué cambia entre ellas.</li>
+      <li>Las píldoras de estado son tres clases distintas para tres valores distintos. <strong>No escribas tres bloques condicionales</strong>: mira los nombres de las clases y el valor del campo <code>estado</code>. Se pueden armar en una línea.</li>
+      <li>La segunda fila tiene <code>class="atrasada"</code> y un <code>&lt;small&gt;</code> con los días. Las dos cosas dependen del mismo campo.</li>
+      <li>Los botones cambian por fila. Escribe cuál aparece con cada estado antes de programar:
+        <ul>
+          <li><code>pendiente</code> → Entregar, Editar, Eliminar</li>
+          <li><code>entregado</code> → Devolver, Editar, Eliminar</li>
+          <li><code>devuelto</code> → sólo Eliminar</li>
+        </ul>
+      </li>
+      <li>Falta la clase <code>ocupada</code>: ninguna fila de la maqueta la tiene, porque sólo aparece mientras esa fila espera al servidor. Tú tienes que agregarla.</li>
+      <li>Los cuatro controles de filtro no guardan nada. <strong>Ojo acá</strong>: el atajo obvio para enlazarlos es justamente el que <code>strict</code> te va a rechazar. Vuelve a leer el recuadro de más arriba.</li>
+      <li>Los botones de paginación deben deshabilitarse en los extremos. El dato para saberlo viene en <code>meta</code>.</li>
+      <li>Los <code>&lt;a href="#"&gt;</code> tienen el mismo problema que en el Requisito 1.</li>
+    </ul>
+  </div>
+
+  <div class="nota">
+    <strong>Ayudante de presentación — cópialo.</strong>
+  </div>
+
+  <span class="file file--bien">Formato de fecha corto</span>
+<pre><code>const fecha = (iso) =&gt;
+  new Date(iso + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })</code></pre>
+
+
+</section>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="ej4">
+  <h2>Requisito 4 — El formulario en Vuex</h2>
+  <p class="meta"><strong>Entregable:</strong> el bloque de formulario dentro de <code>prestamos.js</code> y <code>PrestamoFormView.vue</code>. · <strong>Es el requisito que más pesa en la revisión.</strong></p>
+
+  <h3>Qué se necesita</h3>
+  <p>
+    Un formulario que sirve para <strong>dos cosas</strong>: registrar un préstamo nuevo
+    (<code>/prestamos/nuevo</code>) y editar uno existente (<code>/prestamos/:id</code>). Mismo
+    componente, misma vista, distinto comportamiento según haya <code>id</code> o no.
+  </p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Campo</th><th>Control</th><th>De dónde salen las opciones</th></tr></thead>
+      <tbody>
+        <tr><td><code>equipoId</code></td><td><code>&lt;select&gt;</code></td><td>Módulo <code>equipos</code></td></tr>
+        <tr><td><code>solicitante</code></td><td>texto</td><td>—</td></tr>
+        <tr><td><code>area</code></td><td>texto</td><td>—</td></tr>
+        <tr><td><code>cantidad</code></td><td>número</td><td>—</td></tr>
+        <tr><td><code>fechaRetiro</code></td><td><code>date</code></td><td>—</td></tr>
+        <tr><td><code>fechaDevolucion</code></td><td><code>date</code></td><td>—</td></tr>
+        <tr><td><code>observacion</code></td><td><code>textarea</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="vivo">
+    <strong>"Pero un formulario es estado local, eso no va en Vuex."</strong>
+    <p>
+      En general, cierto. Un campo de búsqueda, un modal abierto o cerrado: eso es del componente. Pero
+      cuenta de dónde viene lo que necesita <em>este</em> formulario: las opciones del selector vienen del
+      módulo <code>equipos</code>; los errores vienen de la respuesta del <code>POST</code>; el préstamo a
+      editar viene del servidor; y la planilla necesita enterarse de que se creó uno nuevo.
+    </p>
+    <p>
+      <strong>Nada de eso es local.</strong> Ése es el criterio: si puedes enumerar razones concretas, va
+      al store. Si no puedes, déjalo local.
+    </p>
+  </div>
+
+  <h3>Lo central: 422 y 409 no se muestran igual</h3>
+
+  <div class="duo">
+    <div>
+      <span class="file file--api">422 — un campo está mal</span>
+<pre><code>{
+  "message": "Algunos campos
+              tienen problemas.",
+  "errores": {
+    "solicitante": "mínimo 3
+                    caracteres",
+    "cantidad": "entero entre
+                 1 y 20",
+    "fechaDevolucion": "no puede
+       ser anterior al retiro"
+  }
+}</code></pre>
+      <p>
+        Hay un <strong>campo culpable</strong>. El mensaje va <strong>debajo de ese input</strong> y el
+        usuario lo arregla corrigiéndolo.
+      </p>
+    </div>
+    <div>
+      <span class="file file--api">409 — no alcanzan las unidades</span>
+<pre><code>{
+  "message": "No hay unidades
+    suficientes de Notebook
+    Lenovo ThinkPad. Pediste 5
+    y sólo quedan 3.",
+  "stock": {
+    "equipo": "Notebook...",
+    "solicitadas": 5,
+    "disponibles": 3,
+    "comprometidas": 9,
+    "stockTotal": 12
+  }
+}</code></pre>
+      <p>
+        <strong>Ningún campo está mal.</strong> Ponerlo debajo de un input sería mentirle al usuario. Va
+        arriba, en su propia caja.
+      </p>
+    </div>
+  </div>
+
+  <div class="alto">
+    <strong>Si guardas los dos en la misma variable del state, este requisito está mal resuelto.</strong>
+    <p>
+      Son dos problemas de naturaleza distinta y necesitan dos lugares distintos en el state y dos
+      tratamientos distintos en la pantalla. Es el atajo más común y el que produce interfaces que
+      confunden a quien las usa.
+    </p>
+  </div>
+
+  <h3>Criterios de aceptación</h3>
+
+  <div class="check">
+    <h4>El estado del formulario</h4>
+    <ul>
+      <li>Los campos del formulario están en el <strong>state del módulo</strong>, no en <code>ref</code> del componente</li>
+      <li>El formulario en blanco se genera con una <strong>función</strong>, no con una constante. Compruébalo: crea un préstamo, vuelve a "Nuevo" y verifica que <strong>no arrastra los datos del anterior</strong></li>
+      <li>Escribir en un campo dispara una <strong>mutation</strong>. En Devtools se ve una mutation con nombre y valor por cada tecla</li>
+      <li>Los errores de campo (<code>422</code>) y el conflicto de stock (<code>409</code>) están en <strong>dos propiedades separadas</strong> del state</li>
+      <li>Hay un indicador de "guardando" que deshabilita el botón</li>
+      <li>Los estados y categorías del formulario salen de <code>/prestamos/opciones</code>, <strong>no escritos a mano</strong> en el template</li>
+      <li>No hay <strong>ni un</strong> <code>v-model</code> apuntando al store</li>
+    </ul>
+  </div>
+
+  <div class="check">
+    <h4>El comportamiento</h4>
+    <ul>
+      <li>Entrar a <code>/prestamos/nuevo</code> deja el formulario limpio</li>
+      <li>Entrar a <code>/prestamos/7</code> lo llena con los datos de ese préstamo, <strong>pedidos frescos al servidor</strong> (no tomados de la lista que tenías cargada, que puede estar vieja)</li>
+      <li>Entrar a <code>/prestamos/9999</code> no deja al usuario mirando un formulario vacío para siempre</li>
+      <li>El título dice "Registrar préstamo" o "Editar préstamo" según corresponda</li>
+      <li>Los mensajes del <code>422</code> se muestran <strong>tal como los manda el servidor</strong>. No los traduzcas ni los reescribas</li>
+      <li>El input con error se marca visualmente, con la clase <code>.malo</code> de la hoja de estilos</li>
+      <li>Corregir <strong>un</strong> campo borra <strong>sólo su</strong> mensaje. Los demás se quedan</li>
+      <li>El <code>409</code> se muestra en la caja <code>.conflicto</code>, arriba, e incluye <strong>cuántas unidades hay disponibles</strong> — ese número te lo da el servidor, úsalo</li>
+      <li>Al guardar bien: se limpia el formulario, se refresca la planilla y <strong>recién ahí</strong> se navega con <code>router.push</code></li>
+      <li>Al guardar mal: <strong>no se navega</strong>. El usuario tiene que ver qué pasó</li>
+      <li>La action de guardar <strong>devuelve un resultado</strong> (algo como <code>{ ok, tipo }</code>) en vez de lanzar una excepción, para que el componente decida si navegar</li>
+    </ul>
+  </div>
+
+  <div class="ojo">
+    <strong>Cómo probar el 409 sin preparar nada.</strong>
+    <p>
+      Elige <strong>Cámara de video</strong>: existen 3 y las 3 están fuera. Cualquier cantidad te va a
+      dar 409 de inmediato.
+    </p>
+    <p>
+      Para ver el mensaje con números intermedios, elige <strong>Notebook Lenovo</strong>: hay 12, hay 9
+      comprometidos, quedan 3. Pide 5 y el servidor te va a decir exactamente eso.
+    </p>
+    <p>
+      Y después, para ver el ciclo completo: en la planilla marca como <em>devuelto</em> el préstamo
+      PR-0004 (2 cámaras). Vuelve al formulario y pide una cámara. <strong>Ahora entra.</strong> Devolver
+      libera el stock.
+    </p>
+  </div>
+
+  <div class="nota">
+    <strong>Una pista sobre el selector, que sube mucho la calidad de tu entrega.</strong>
+    <p>
+      Como ya tienes el módulo <code>equipos</code> cargado, puedes mostrar <strong>cuántas unidades
+      quedan al lado de cada opción</strong> del <code>&lt;select&gt;</code>, y avisar antes de enviar si
+      la cantidad pedida supera lo disponible.
+    </p>
+    <p>
+      Eso es validación de <strong>cortesía</strong>: hace la interfaz más amable, evita un viaje al
+      servidor. Pero ojo con la conclusión equivocada — <strong>no reemplaza al 409</strong>. Entre que
+      tu pantalla leyó "quedan 3" y que el usuario aprieta Guardar, alguien más pudo llevarse las tres.
+      Por eso el 409 tiene que seguir manejado.
+    </p>
+  </div>
+  <h3>La maqueta de la pantalla</h3>
+  <p>
+    El formulario con <strong>los dos tipos de error visibles a la vez</strong>, para que veas dónde va
+    cada uno. En la aplicación real casi nunca aparecerán juntos.
+  </p>
+
+  <span class="file file--maqueta">maqueta-formulario.html</span>
+<pre><code>&lt;section class="tarjeta" style="max-width:640px;margin:0 auto"&gt;
+  &lt;h2&gt;Registrar préstamo&lt;/h2&gt;
+
+  &lt;!-- ===== El 409: arriba, en su propia caja ===== --&gt;
+  &lt;div class="conflicto"&gt;
+    &lt;strong&gt;No alcanzan las unidades&lt;/strong&gt;
+    &lt;p&gt;No hay unidades suficientes de Notebook Lenovo ThinkPad. Pediste 5 y sólo quedan 3.&lt;/p&gt;
+    &lt;p&gt;De 12 unidades de &lt;strong&gt;Notebook Lenovo ThinkPad&lt;/strong&gt;, hay 9 fuera del pañol. Quedan &lt;strong&gt;3&lt;/strong&gt;.&lt;/p&gt;
+  &lt;/div&gt;
+
+  &lt;form class="form"&gt;
+    &lt;div class="fila"&gt;
+      &lt;label&gt;
+        &lt;span&gt;Equipo&lt;/span&gt;
+        &lt;select&gt;
+          &lt;option value=""&gt;Elige un equipo…&lt;/option&gt;
+          &lt;option&gt;Notebook Lenovo ThinkPad — quedan 3&lt;/option&gt;
+          &lt;option&gt;Proyector portátil — quedan 2&lt;/option&gt;
+        &lt;/select&gt;
+      &lt;/label&gt;
+
+      &lt;label&gt;
+        &lt;span&gt;Cantidad&lt;/span&gt;
+        &lt;!-- ===== El 422: el campo se marca y el mensaje va DEBAJO ===== --&gt;
+        &lt;input type="number" min="1" max="20" value="99" class="malo"&gt;
+        &lt;small class="malo-txt"&gt;La cantidad debe ser un número entero entre 1 y 20.&lt;/small&gt;
+      &lt;/label&gt;
+    &lt;/div&gt;
+
+    &lt;label&gt;
+      &lt;span&gt;Quién retira&lt;/span&gt;
+      &lt;input type="text" placeholder="Nombre de la persona o del curso"&gt;
+    &lt;/label&gt;
+
+    &lt;label&gt;
+      &lt;span&gt;Área o asignatura&lt;/span&gt;
+      &lt;input type="text" placeholder="Taller de Redes, Certificación G7…"&gt;
+    &lt;/label&gt;
+
+    &lt;div class="fila"&gt;
+      &lt;label&gt;
+        &lt;span&gt;Fecha de retiro&lt;/span&gt;
+        &lt;input type="date"&gt;
+      &lt;/label&gt;
+
+      &lt;label&gt;
+        &lt;span&gt;Fecha de devolución&lt;/span&gt;
+        &lt;input type="date" class="malo"&gt;
+        &lt;small class="malo-txt"&gt;La devolución no puede ser anterior al retiro.&lt;/small&gt;
+      &lt;/label&gt;
+    &lt;/div&gt;
+
+    &lt;label&gt;
+      &lt;span&gt;Observación &lt;em style="font-weight:400;color:#94a3b8"&gt;(opcional)&lt;/em&gt;&lt;/span&gt;
+      &lt;textarea rows="2" maxlength="200"&gt;&lt;/textarea&gt;
+    &lt;/label&gt;
+
+    &lt;footer class="cabecera" style="margin:0;justify-content:flex-end;gap:.6rem"&gt;
+      &lt;button type="button" class="btn btn--gris"&gt;Cancelar&lt;/button&gt;
+      &lt;button type="submit" class="btn"&gt;Registrar&lt;/button&gt;
+    &lt;/footer&gt;
+  &lt;/form&gt;
+&lt;/section&gt;</code></pre>
+
+  <div class="alto">
+    <strong>Mira dónde está cada error en esa maqueta. Ésa es la lección completa del requisito.</strong>
+    <p>
+      El <strong>422</strong> aparece <em>dos veces</em>, y las dos debajo de un campo: la clase
+      <code>malo</code> en el input y un <code>&lt;small class="malo-txt"&gt;</code> con el mensaje del
+      servidor. Hay un campo culpable y el usuario lo corrige ahí.
+    </p>
+    <p>
+      El <strong>409</strong> aparece <em>una vez</em>, arriba, en un <code>div.conflicto</code>. Ningún
+      campo está mal. Ponerlo debajo de un input sería mentirle al usuario.
+    </p>
+    <p>
+      En tu store esos dos tienen que salir de <strong>dos propiedades distintas del state</strong>. Si
+      salen de la misma, el requisito está mal resuelto aunque la pantalla se vea igual.
+    </p>
+  </div>
+
+  <div class="ojo">
+    <strong>Lo que tienes que resolver en esta maqueta.</strong>
+    <ul>
+      <li>La caja del <code>conflicto</code> y los dos <code>&lt;small class="malo-txt"&gt;</code> están escritos fijos. En tu versión aparecen <strong>sólo cuando existe el error correspondiente</strong>.</li>
+      <li>La clase <code>malo</code> del input también es condicional, y depende de <strong>si hay mensaje para ese campo en particular</strong>.</li>
+      <li>Ninguno de los siete campos está enlazado al store. Ojo con el atajo obvio: <code>strict</code> lo rechaza. Ya sabes cuál es.</li>
+      <li>Las dos <code>&lt;option&gt;</code> de equipos están a mano, y el "quedan 3" también. Los dos salen del módulo <code>equipos</code>.</li>
+      <li>El título dice "Registrar préstamo" fijo. Tiene que cambiar cuando estés editando.</li>
+      <li>El <code>&lt;form&gt;</code> no hace nada al enviarse, y el navegador va a recargar la página. Averigua qué modificador de evento lo impide.</li>
+      <li>El botón de enviar debe deshabilitarse mientras se guarda, y decir otra cosa.</li>
+      <li>Falta lo más importante y no se ve en la maqueta: <strong>al corregir un campo, su mensaje tiene que desaparecer — y sólo el suyo.</strong></li>
+    </ul>
+  </div>
+
+
+</section>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="ej5">
+  <h2>Requisito 5 — El panel del encargado</h2>
+  <p class="meta"><strong>Entregable:</strong> un tercer módulo para el resumen y <code>PanelView.vue</code>.</p>
+
+  <h3>Qué se necesita</h3>
+  <p>
+    La pantalla <code>/</code> es para el encargado del pañol. Necesita cuatro cifras grandes y dos
+    bloques de detalle:
+  </p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Elemento</th><th>Qué muestra</th></tr></thead>
+      <tbody>
+        <tr><td>Cifra 1</td><td>Total de préstamos registrados</td></tr>
+        <tr><td>Cifra 2</td><td>Unidades fuera del pañol ahora mismo</td></tr>
+        <tr><td>Cifra 3</td><td><strong>Atrasados</strong> — en rojo si hay alguno</td></tr>
+        <tr><td>Cifra 4</td><td>Valor en circulación, formateado en pesos</td></tr>
+        <tr><td>Bloque A</td><td>Uso del inventario por equipo, con barra de porcentaje</td></tr>
+        <tr><td>Bloque B</td><td>Préstamos vivos por categoría</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>La decisión de este requisito</h3>
+
+  <div class="alto">
+    <strong>Tienes dos formas de saber cuántos préstamos hay entregados. Sólo una es correcta acá.</strong>
+    <p>
+      <strong>A.</strong> Un getter sobre <code>state.prestamos.lista</code>. Instantáneo, gratis, no falla.
+      Pero cuenta <strong>los 6 de la página actual</strong>, no los 15 del pañol.
+    </p>
+    <p>
+      <strong>B.</strong> Pedir <code>/prestamos/resumen</code>. Cuesta una petición y puede fallar, pero
+      ve <strong>toda la base de datos</strong>.
+    </p>
+    <p>
+      Si usas el getter para el panel, tu pantalla va a mostrar un número con toda seguridad y va a estar
+      equivocado. Eso es peor que un error: un error se ve, un número equivocado no.
+    </p>
+    <p>
+      <strong>No le preguntes a la red lo que ya tienes en memoria, y no inventes con tu memoria lo que
+      sólo sabe la base de datos.</strong>
+    </p>
+  </div>
+
+  <h3>Criterios de aceptación</h3>
+
+  <div class="check">
+    <h4>El módulo del resumen</h4>
+    <ul>
+      <li>Es un <strong>tercer módulo</strong>, separado de <code>prestamos</code>. Justificación: si el resumen falla, la planilla tiene que seguir funcionando</li>
+      <li>Todas las cifras grandes salen de <code>/prestamos/resumen</code>, <strong>ninguna de un getter sobre la página cargada</strong></li>
+      <li>Tiene caché: no vuelve a pedir el resumen si lo pidió hace menos de 30 segundos</li>
+      <li>Hay un botón que <strong>fuerza</strong> la actualización saltándose el caché</li>
+      <li>Hay al menos dos getters que dan <strong>forma</strong> a lo que ya trajo el servidor. Eso sí es legítimo: no estás inventando totales, estás preparando datos completos para pintarlos</li>
+    </ul>
+  </div>
+
+  <div class="check">
+    <h4>El panel</h4>
+    <ul>
+      <li>La cifra de atrasados usa la clase <code>.cifra--malo</code> cuando hay al menos uno</li>
+      <li>El valor en circulación está formateado como moneda chilena. Pista: <code>toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })</code></li>
+      <li>Las barras de uso se pintan con <code>.riel</code>, y usan <code>.riel--lleno</code> cuando el equipo está al 100%</li>
+      <li>Se maneja el estado de carga y el de error</li>
+      <li>Hay una nota visible que aclara que las cifras son del pañol completo, no de la página que se ve en la planilla</li>
+    </ul>
+  </div>
+
+  <div class="ojo">
+    <strong>La demostración que tienes que poder hacer al entregar.</strong>
+    <p>
+      Abre el panel, anota el total. Abre la planilla y mira el contador de la cabecera. <strong>No
+      coinciden.</strong> Tienes que poder explicar por qué, y por qué <em>ninguno de los dos está
+      mal</em>.
+    </p>
+    <p>
+      Después crea un préstamo y vuelve al panel: la cifra <strong>no cambia</strong>, porque el caché de
+      30 segundos todavía no vence. Aprieta Actualizar y ahí sí. Eso tampoco es un bug — es una decisión,
+      y tienes que poder defenderla.
+    </p>
+  </div>
+  <h3>La maqueta de la pantalla</h3>
+
+  <span class="file file--maqueta">maqueta-panel.html</span>
+<pre><code>&lt;section&gt;
+  &lt;header class="cabecera"&gt;
+    &lt;h2&gt;Panel del pañol&lt;/h2&gt;
+    &lt;button class="btn"&gt;Actualizar&lt;/button&gt;
+  &lt;/header&gt;
+
+  &lt;!-- Las cuatro cifras grandes --&gt;
+  &lt;div class="cifras"&gt;
+    &lt;article class="cifra"&gt;
+      &lt;span class="valor"&gt;15&lt;/span&gt;
+      &lt;span class="rotulo"&gt;Préstamos&lt;/span&gt;
+    &lt;/article&gt;
+
+    &lt;article class="cifra cifra--bien"&gt;
+      &lt;span class="valor"&gt;32&lt;/span&gt;
+      &lt;span class="rotulo"&gt;Unidades fuera&lt;/span&gt;
+    &lt;/article&gt;
+
+    &lt;article class="cifra cifra--malo"&gt;
+      &lt;span class="valor"&gt;2&lt;/span&gt;
+      &lt;span class="rotulo"&gt;Atrasados&lt;/span&gt;
+    &lt;/article&gt;
+
+    &lt;article class="cifra cifra--aviso"&gt;
+      &lt;span class="valor"&gt;$8.965.000&lt;/span&gt;
+      &lt;span class="rotulo"&gt;En circulación&lt;/span&gt;
+    &lt;/article&gt;
+  &lt;/div&gt;
+
+  &lt;div class="grilla" style="grid-template-columns:1fr 1fr"&gt;
+
+    &lt;article class="tarjeta"&gt;
+      &lt;h3&gt;Uso del inventario&lt;/h3&gt;
+      &lt;p class="sub"&gt;El más pedido es &lt;strong&gt;Multímetro digital&lt;/strong&gt;.&lt;/p&gt;
+
+      &lt;div style="margin-bottom:.7rem"&gt;
+        &lt;p class="sub" style="display:flex;justify-content:space-between;margin:0 0 .2rem"&gt;
+          &lt;span&gt;Notebook Lenovo ThinkPad&lt;/span&gt;
+          &lt;strong&gt;9 / 12&lt;/strong&gt;
+        &lt;/p&gt;
+        &lt;span class="riel"&gt;&lt;i style="width: 75%"&gt;&lt;/i&gt;&lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div style="margin-bottom:.7rem"&gt;
+        &lt;p class="sub" style="display:flex;justify-content:space-between;margin:0 0 .2rem"&gt;
+          &lt;span&gt;Cámara de video&lt;/span&gt;
+          &lt;strong&gt;3 / 3&lt;/strong&gt;
+        &lt;/p&gt;
+        &lt;span class="riel riel--lleno"&gt;&lt;i style="width: 100%"&gt;&lt;/i&gt;&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/article&gt;
+
+    &lt;article class="tarjeta"&gt;
+      &lt;h3&gt;Préstamos vivos por categoría&lt;/h3&gt;
+      &lt;table&gt;
+        &lt;thead&gt;
+          &lt;tr&gt;&lt;th&gt;Categoría&lt;/th&gt;&lt;th&gt;Préstamos&lt;/th&gt;&lt;/tr&gt;
+        &lt;/thead&gt;
+        &lt;tbody&gt;
+          &lt;tr&gt;&lt;td&gt;computacion&lt;/td&gt;&lt;td&gt;3&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td&gt;audiovisual&lt;/td&gt;&lt;td&gt;3&lt;/td&gt;&lt;/tr&gt;
+        &lt;/tbody&gt;
+      &lt;/table&gt;
+
+      &lt;p class="sub" style="margin-top:1rem"&gt;
+        Valor en circulación: &lt;strong&gt;$8.965.000&lt;/strong&gt;
+      &lt;/p&gt;
+    &lt;/article&gt;
+
+  &lt;/div&gt;
+
+  &lt;p class="sub" style="text-align:center;margin-top:1rem"&gt;
+    Cifras del servidor sobre los 15 préstamos del pañol,
+    no sobre la página que estás viendo en la planilla.
+  &lt;/p&gt;
+&lt;/section&gt;</code></pre>
+
+  <div class="ojo">
+    <strong>Lo que tienes que resolver en esta maqueta.</strong>
+    <ul>
+      <li>Las cuatro tarjetas de cifra tienen <strong>modificadores distintos</strong> (<code>cifra--bien</code>, <code>--malo</code>, <code>--aviso</code>, y la primera ninguno). Piensa si conviene repetir cuatro bloques o generar los cuatro desde una estructura de datos.</li>
+      <li>El <code>cifra--malo</code> de "Atrasados" no debería ser fijo: si no hay ninguno atrasado, esa tarjeta no tiene por qué estar en rojo.</li>
+      <li>Sólo hay dos barras de uso escritas y en la realidad son ocho.</li>
+      <li>Los anchos (<code>75%</code>, <code>100%</code>) y la clase <code>riel--lleno</code> están puestos a mano. El resumen del servidor te trae un campo que resuelve el ancho directo — búscalo.</li>
+      <li>La tabla de categorías recorre un <strong>objeto</strong>, no un arreglo. Averigua qué recibe la directiva de repetición cuando le pasas un objeto: <strong>el orden de los dos parámetros sorprende a todo el mundo la primera vez</strong>.</li>
+      <li>Los montos vienen del servidor como números planos. El formato de moneda es cosa tuya.</li>
+      <li>Faltan el estado de carga y el de error.</li>
+      <li>Y lo esencial: <strong>ninguno de estos números puede salir de un getter sobre la lista de préstamos que tengas cargada.</strong> Ahí hay 6 registros; en el pañol hay 15.</li>
+    </ul>
+  </div>
+
+
+</section>
+
+<!-- ================================================================ -->
+<section class="ejercicio" id="cierre">
+  <h2>Cierre</h2>
+
+  <h3>Cómo se revisa tu entrega</h3>
+  <p>
+    Se abre tu proyecto y se hacen estas nueve comprobaciones, en este orden. Puedes hacértelas tú antes
+    de entregar:
+  </p>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>#</th><th>Comprobación</th><th>Cómo se hace</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Ningún componente importa axios</td>
+          <td>Buscar <code>from 'axios'</code> en todo <code>src/</code>. Sólo puede aparecer en <code>api/http.js</code></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>La URL del backend aparece una sola vez</td>
+          <td>Buscar <code>localhost:3001</code></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Ninguna mutation tiene <code>await</code></td>
+          <td>Leer los bloques <code>mutations</code></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Todos los módulos tienen <code>namespaced: true</code> y <code>state</code> como función</td>
+          <td>Leer las tres primeras líneas de cada módulo</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Los filtros sobreviven a la navegación</td>
+          <td>Filtrar, salir a otra pantalla, volver</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Los errores del 422 se pintan bajo cada campo</td>
+          <td>Enviar el formulario con todos los campos malos</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>El 409 tiene tratamiento propio y dice cuántas quedan</td>
+          <td>Pedir 5 notebooks</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>El panel no miente</td>
+          <td>Comparar el total del panel con el contador de la planilla</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Devolver libera stock</td>
+          <td>Devolver PR-0004 y pedir una cámara</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nota">
+    <strong>Si algo no alcanzaste a terminar, dilo en el README de tu proyecto.</strong>
+    <p>
+      Una entrega incompleta que reconoce qué falta y por qué vale más que una que pretende estar completa.
+      En el trabajo real pasa exactamente lo mismo.
+    </p>
+  </div>
+
+  <h3>Los errores que te van a pasar</h3>
+
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Síntoma</th><th>Causa</th><th>Arreglo</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>La pantalla queda vacía y <strong>no hay ningún error</strong></td>
+          <td><code>dispatch('cargar')</code> sin el prefijo del módulo</td>
+          <td><code>dispatch('equipos/cargar')</code></td>
+        </tr>
+        <tr>
+          <td><em>"Do not mutate vuex store state outside mutation handlers"</em></td>
+          <td><code>v-model</code> contra el store, o una action que asigna al state</td>
+          <td><code>:value</code> + <code>@input</code> con <code>commit</code></td>
+        </tr>
+        <tr>
+          <td>El formulario nuevo arrastra datos del anterior</td>
+          <td>El objeto por defecto es una constante</td>
+          <td>Que sea una <strong>función</strong></td>
+        </tr>
+        <tr>
+          <td>El backend responde <code>400</code> al filtrar</td>
+          <td>Estás enviando filtros vacíos como <code>estado=""</code></td>
+          <td>No incluirlos en <code>params</code> si están vacíos</td>
+        </tr>
+        <tr>
+          <td>El formulario de "nuevo" pide el préstamo <code>"nuevo"</code></td>
+          <td><code>/prestamos/:id</code> declarada antes</td>
+          <td>Lo específico antes que lo genérico</td>
+        </tr>
+        <tr>
+          <td><code>{ root: true }</code> no hace nada</td>
+          <td>Falta el <code>null</code> del payload</td>
+          <td><code>dispatch('otro/accion', null, { root: true })</code></td>
+        </tr>
+        <tr>
+          <td>Subir la cantidad de un préstamo da <code>409</code> siempre</td>
+          <td>Es un problema del servidor, no tuyo — y ya está resuelto: al editar se excluye a sí mismo del cálculo</td>
+          <td>Si te pasa, revisa que estés mandando el <code>PUT</code> al id correcto</td>
+        </tr>
+        <tr>
+          <td>La fila queda deshabilitada para siempre</td>
+          <td>El indicador de "ocupada" no se limpia cuando falla</td>
+          <td><code>finally</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Si terminas antes</h3>
+
+  <div class="reto">
+    <h4>Extras, en orden de dificultad</h4>
+    <ol>
+      <li>
+        <strong>Aviso de éxito.</strong> Al crear un préstamo, que la planilla muestre una franja verde con
+        el código del préstamo creado, que se desvanezca a los 4 segundos.
+      </li>
+      <li>
+        <strong>Invalidar el resumen.</strong> Que crear, editar o eliminar un préstamo fuerce la
+        actualización del panel. Pista: <code>dispatch('resumen/cargar', { forzar: true }, { root: true })</code>.
+      </li>
+      <li>
+        <strong>Disponibilidad viva en el formulario.</strong> Que al elegir un equipo aparezca debajo
+        "quedan N unidades", y que el campo cantidad limite su máximo a ese número. Recuerda: es cortesía,
+        el 409 igual se maneja.
+      </li>
+      <li>
+        <strong>Filtros en la URL.</strong> Que los filtros de la planilla se reflejen como
+        <em>query params</em> (<code>/prestamos?estado=entregado</code>) y que al recargar la página se
+        restauren. Pista: <code>router.replace({ query })</code> y leer <code>route.query</code> al montar.
+        Esto es Router y Vuex trabajando juntos, y es más difícil de lo que parece.
+      </li>
+      <li>
+        <strong>Vista de detalle de un equipo.</strong> Ruta <code>/inventario/:id</code> que muestre el
+        equipo y <strong>todos sus préstamos vivos</strong>. Necesita los dos módulos a la vez.
+      </li>
+      <li>
+        <strong>Migrar a Pinia.</strong> Los mismos tres módulos, sin mutations y sin prefijos. Vas a
+        descubrir que lo que costó entender —qué dato va dónde— se transfiere entero, y que la sintaxis
+        era lo fácil.
+      </li>
+    </ol>
+  </div>
+
+  <div class="vivo">
+    <strong>Lo que estás practicando de verdad.</strong>
+    <p>
+      No es Vuex. Vuex es la excusa. Lo que estás practicando es <strong>decidir dónde va cada cosa</strong>:
+      qué dato pertenece a la aplicación y cuál al componente, dónde vive la llamada a la red, cuándo un
+      cálculo local alcanza y cuándo hay que preguntarle al servidor, y por qué un conflicto de negocio no
+      se muestra igual que un campo mal escrito.
+    </p>
+    <p>
+      Eso no cambia cuando cambies de librería, de framework o de lenguaje. La sintaxis se olvida en un
+      año. Esto no.
+    </p>
+  </div>
+</section>
+
+<footer>
+  Módulo 7 · Lección 3 — Actividad práctica · Vue 3 + Vuex 4 + Vue Router 4 + Axios<br>
+  API: <code>node-backend-edu</code> · rutas <code>/api/libre/equipos</code> y <code>/api/libre/prestamos</code>, sin autenticación
+</footer>
+
+</div>
+
+
+<script>
+  // ====================================================================
+  // RESALTADOR DE SINTAXIS + ORGANIZACIÓN DEL CÓDIGO RESUELTO
+  //
+  // Escrito a mano y sin dependencias, a propósito: este documento tiene
+  // que abrirse desde el disco (file://) y funcionar sin internet.
+  //
+  // Trabaja sobre el TEXTO del bloque (textContent) y vuelve a escaparlo
+  // al pintar. Por eso el código que copias es exactamente el mismo que
+  // está escrito en el archivo: el color se agrega en el navegador.
+  // ====================================================================
+  (function () {
+    'use strict';
+
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /* ------------------------------------------------------------------
+       Motor: una sola pasada con una expresión regular alternada.
+       Regla de oro — los patrones NO pueden llevar grupos capturadores,
+       solo (?:...), porque el índice del grupo identifica qué coincidió.
+       ------------------------------------------------------------------ */
+    function pintar(texto, patrones) {
+      if (!texto) return '';
+      var re = new RegExp(patrones.map(function (p) { return '(' + p.r + ')'; }).join('|'), 'gm');
+      var salida = '', ultimo = 0, m;
+
+      while ((m = re.exec(texto)) !== null) {
+        if (m[0] === '') { re.lastIndex++; continue; }
+        if (m.index > ultimo) salida += esc(texto.slice(ultimo, m.index));
+
+        var clase = null;
+        for (var i = 1; i <= patrones.length; i++) {
+          if (m[i] !== undefined) { clase = patrones[i - 1].c; break; }
+        }
+        salida += clase
+          ? '<span class="t-' + clase + '">' + esc(m[0]) + '</span>'
+          : esc(m[0]);
+
+        ultimo = m.index + m[0].length;
+      }
+
+      salida += esc(texto.slice(ultimo));
+      return salida;
+    }
+
+    /* ---------------------------- JavaScript ---------------------------- */
+    var JS = [
+      { c: 'com',  r: '\\/\\*[\\s\\S]*?\\*\\/' },
+      { c: 'com',  r: '\\/\\/[^\\n]*' },
+      { c: 'str',  r: '`(?:\\\\[\\s\\S]|[^`\\\\])*`' },
+      { c: 'str',  r: '"(?:\\\\.|[^"\\\\\\n])*"' },
+      { c: 'str',  r: "'(?:\\\\.|[^'\\\\\\n])*'" },
+      { c: 'kw',   r: '\\b(?:import|from|export|default|const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|try|catch|finally|throw|new|delete|typeof|instanceof|class|extends|async|await|yield|this|super|static)\\b' },
+      { c: 'lit',  r: '\\b(?:true|false|null|undefined|NaN|Infinity)\\b' },
+      { c: 'num',  r: '\\b(?:0[xX][\\da-fA-F]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b' },
+      { c: 'fn',   r: '\\b[A-Za-z_$][\\w$]*(?=\\s*\\()' },
+      { c: 'prop', r: '\\b[A-Za-z_$][\\w$]*(?=\\s*:)' },
+      { c: 'op',   r: '=>|\\.\\.\\.|\\?\\?|\\?\\.|&&|\\|\\||[←→↓]+' }
+    ];
+
+    /* ------------------------------- JSON ------------------------------- */
+    var JSON_ = [
+      { c: 'com',  r: '\\/\\/[^\\n]*' },
+      // Las anotaciones con flecha son notas del profesor, no datos:
+      // se leen como comentario aunque JSON no tenga comentarios.
+      { c: 'com',  r: '←[^\\n]*' },
+      { c: 'prop', r: '"(?:\\\\.|[^"\\\\])*"(?=\\s*:)' },
+      { c: 'str',  r: '"(?:\\\\.|[^"\\\\])*"' },
+      { c: 'lit',  r: '\\b(?:true|false|null)\\b' },
+      { c: 'num',  r: '-?\\b\\d+(?:\\.\\d+)?\\b' },
+      { c: 'op',   r: '[→]+' }
+    ];
+
+    /* ------------------------------ Terminal ---------------------------- */
+    var BASH = [
+      { c: 'com',  r: '#[^\\n]*' },
+      { c: 'str',  r: 'https?:\\/\\/[^\\s\'"\\\\]+' },
+      { c: 'str',  r: '"(?:\\\\.|[^"\\\\])*"' },
+      { c: 'str',  r: "'(?:\\\\[\\s\\S]|[^'\\\\])*'" },
+      { c: 'kw',   r: '^\\s*(?:npm|npx|node|cd|curl|git|mkdir|for|do|done|echo|export|cat|rm|ls|printf)\\b' },
+      { c: 'fn',   r: '(?:^|\\s)-{1,2}[A-Za-z][\\w-]*' },
+      { c: 'op',   r: '[←→|]+' },
+      { c: 'num',  r: '\\b\\d+(?:\\.\\d+)?\\b' }
+    ];
+
+    /* --------------------- Árbol de carpetas y salidas ------------------- */
+    var ARBOL = [
+      { c: 'com',  r: '←[^\\n]*' },
+      { c: 'op',   r: '[├└│─]+' },
+      { c: 'ruta', r: '[\\w.@-]+\\/' }
+    ];
+
+    /* -------------------------------- CSS -------------------------------- */
+    var CSS_ = [
+      { c: 'com',  r: '\\/\\*[\\s\\S]*?\\*\\/' },
+      { c: 'str',  r: '"(?:\\\\.|[^"\\\\])*"' },
+      { c: 'prop', r: '[-\\w]+(?=\\s*:)' },
+      { c: 'num',  r: '-?\\b\\d+(?:\\.\\d+)?(?:px|rem|em|%|s|ms|vh|vw|fr)?\\b' },
+      { c: 'tag',  r: '[.#][-\\w]+' }
+    ];
+
+    /* -------------------------------- HTML ------------------------------- */
+    var HTML_ = [
+      { c: 'com',    r: '<!--[\\s\\S]*?-->' },
+      { c: 'interp', r: '\\{\\{[^}]*\\}\\}' },
+      { c: 'dir',    r: '(?:^|\\s)(?:v-[\\w:.\\-]+|[@:#][\\w:.\\-]+)(?=[=\\s>])' },
+      { c: 'attr',   r: '(?:^|\\s)[A-Za-z][\\w\\-]*(?==)' },
+      { c: 'str',    r: '"(?:\\\\.|[^"\\\\])*"' },
+      { c: 'str',    r: "'(?:\\\\.|[^'\\\\])*'" },
+      { c: 'tag',    r: '<\\/?[A-Za-z][\\w\\-]*' },
+      { c: 'tag',   r: '\\/?>' }
+    ];
+
+    /* ------------------------------------------------------------------
+       Componente de archivo único (.vue): tres lenguajes en un archivo.
+       Recorremos las etiquetas de apertura y cierre para saber en qué
+       región estamos, y a cada región le aplicamos su propio pintor.
+       ------------------------------------------------------------------ */
+    function pintarVue(texto) {
+      var re = /<script(?:\s[^>]*)?>|<\/script>|<style(?:\s[^>]*)?>|<\/style>/g;
+      var salida = '', pos = 0, modo = 'html', m;
+
+      function region(t) {
+        if (!t) return '';
+        if (modo === 'js') return pintar(t, JS);
+        if (modo === 'css') return pintar(t, CSS_);
+        return pintar(t, HTML_);
+      }
+
+      while ((m = re.exec(texto)) !== null) {
+        salida += region(texto.slice(pos, m.index));
+        salida += pintar(m[0], HTML_);          // la etiqueta, siempre como HTML
+        pos = m.index + m[0].length;
+
+        if (/^<script/.test(m[0]))       modo = 'js';
+        else if (/^<\/script/.test(m[0])) modo = 'html';
+        else if (/^<style/.test(m[0]))    modo = 'css';
+        else if (/^<\/style/.test(m[0]))  modo = 'html';
+      }
+
+      salida += region(texto.slice(pos));
+      return salida;
+    }
+
+    /* ------------------------------------------------------------------
+       Qué lenguaje es cada bloque. Se decide mirando la etiqueta del
+       archivo y, sobre todo, el contenido: el contenido nunca miente.
+       ------------------------------------------------------------------ */
+    function detectarLenguaje(etiqueta, codigo) {
+      var clases = etiqueta ? etiqueta.className : '';
+      var titulo = etiqueta ? etiqueta.textContent : '';
+
+      if (/[├└]──/.test(codigo)) return 'arbol';
+      if (/file--api/.test(clases)) return 'json';
+      if (/<\/(?:template|script|style)>/.test(codigo) || /\.vue\b/i.test(titulo)) return 'vue';
+      if (/file--term/.test(clases)) {
+        return /(?:^|\n)\s*(?:npm|npx|node|cd|curl|git|mkdir|for|echo|printf)\b/.test(codigo)
+          ? 'bash' : 'js';
+      }
+      if (/\.css\b/i.test(titulo)) return 'css';
+      if (/\.html\b/i.test(titulo)) return 'html';
+      if (/^\s*[{[]/.test(codigo) && /"\s*:/.test(codigo)) return 'json';
+      return 'js';
+    }
+
+    var PINTORES = {
+      js:    function (t) { return pintar(t, JS); },
+      json:  function (t) { return pintar(t, JSON_); },
+      bash:  function (t) { return pintar(t, BASH); },
+      arbol: function (t) { return pintar(t, ARBOL); },
+      css:   function (t) { return pintar(t, CSS_); },
+      html:  function (t) { return pintar(t, HTML_); },
+      vue:   pintarVue
+    };
+
+    var NOMBRES = { js: 'js', json: 'json', bash: 'terminal', arbol: 'estructura', css: 'css', vue: 'vue', html: 'html' };
+
+    /* ------------------------------------------------------------------
+       Recorrido de todos los bloques
+       ------------------------------------------------------------------ */
+    var RUTA = /([\w@.\-]+(?:\/[\w@.\-]+)*\.(?:js|vue|json|ts|css|html))/;
+
+    var bloques = Array.prototype.slice.call(document.querySelectorAll('pre > code'));
+
+    bloques.forEach(function (codigo, indice) {
+      var pre = codigo.parentNode;
+
+      // La etiqueta del archivo es el hermano anterior del <pre>
+      var etiqueta = pre.previousElementSibling;
+      if (etiqueta && !etiqueta.classList.contains('file')) etiqueta = null;
+
+      var texto = codigo.textContent;
+      var lenguaje = detectarLenguaje(etiqueta, texto);
+
+      // 1. Colorear
+      codigo.innerHTML = PINTORES[lenguaje](texto);
+      pre.setAttribute('data-lang', NOMBRES[lenguaje] || lenguaje);
+
+      // 2. Clasificar el bloque para que el borde diga qué es
+      var clases = etiqueta ? etiqueta.className : '';
+      var titulo = etiqueta ? etiqueta.textContent : '';
+      var esRuta = RUTA.test(titulo);
+      var tipo;
+
+      // Una maqueta es material de apoyo, NO la solución: no debe pintarse
+      // de verde ni aparecer en el índice de archivos del proyecto.
+      if (/file--maqueta/.test(clases))    tipo = 'maqueta';
+      else if (/file--mal/.test(clases))  tipo = 'problema';
+      else if (/file--api/.test(clases))  tipo = 'api';
+      else if (/file--term/.test(clases)) tipo = 'terminal';
+      else if (esRuta || /file--bien/.test(clases)) tipo = 'solucion';
+      else tipo = 'neutro';
+
+      pre.setAttribute('data-tipo', tipo);
+
+      // Un archivo del proyecto ES la solución, se llame como se llame
+      // la etiqueta. Unificamos para que el verde signifique siempre
+      // lo mismo: "esto va en tu proyecto".
+      if (tipo === 'solucion' && etiqueta) etiqueta.classList.add('file--bien');
+
+      if (etiqueta && !etiqueta.id) etiqueta.id = 'cod-' + indice;
+      if (etiqueta) etiqueta.setAttribute('data-tipo', tipo);
+    });
+
+    /* ------------------------------------------------------------------
+       Índice del código resuelto, uno por ejercicio.
+       Responde de un vistazo: "¿qué archivos me tienen que quedar
+       escritos al terminar esta actividad?"
+       ------------------------------------------------------------------ */
+    document.querySelectorAll('section.ejercicio').forEach(function (seccion) {
+      var archivos = Array.prototype.slice
+        .call(seccion.querySelectorAll('.file[data-tipo="solucion"]'))
+        .map(function (et) {
+          var m = et.textContent.match(RUTA);
+          return m ? { nombre: m[1], id: et.id } : null;
+        })
+        .filter(Boolean);
+
+      // Un mismo archivo puede aparecer varias veces (se va construyendo
+      // por partes). Nos quedamos con la primera aparición de cada uno.
+      var vistos = {};
+      archivos = archivos.filter(function (a) {
+        if (vistos[a.nombre]) return false;
+        vistos[a.nombre] = true;
+        return true;
+      });
+
+      if (archivos.length < 2) return;
+
+      var caja = document.createElement('details');
+      caja.className = 'resuelto';
+      caja.open = true;
+
+      var titulo = document.createElement('summary');
+      titulo.appendChild(document.createTextNode('Código resuelto de este ejercicio'));
+      var conteo = document.createElement('span');
+      conteo.className = 'resuelto__conteo';
+      conteo.textContent = archivos.length + (archivos.length === 1 ? ' archivo' : ' archivos');
+      titulo.appendChild(conteo);
+      caja.appendChild(titulo);
+
+      var lista = document.createElement('ol');
+      archivos.forEach(function (a) {
+        var li = document.createElement('li');
+        var enlace = document.createElement('a');
+        enlace.href = '#' + a.id;
+        enlace.textContent = a.nombre;
+        li.appendChild(enlace);
+        lista.appendChild(li);
+      });
+      caja.appendChild(lista);
+
+      var pie = document.createElement('p');
+      pie.className = 'resuelto__nota';
+      pie.textContent = 'Éstos son los archivos que te tienen que quedar escritos al terminar. '
+        + 'En el documento van marcados en verde; los de borde rojo son el ejemplo de lo que NO hay que hacer.';
+      caja.appendChild(pie);
+
+      // Va justo debajo de la franja de datos del ejercicio
+      var meta = seccion.querySelector('.meta');
+      if (meta && meta.nextSibling) seccion.insertBefore(caja, meta.nextSibling);
+      else if (meta) seccion.appendChild(caja);
+    });
+  })();
+
+</script>
+
+<script>
+  // Botón "Copiar" en cada bloque de código.
+  // Vanilla puro y sin dependencias: este documento es material de lectura.
+  (function () {
+    'use strict';
+
+    function copiarTexto(texto) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(texto);
+      }
+
+      // Respaldo para cuando el archivo se abre con file://
+      return new Promise(function (resolver, rechazar) {
+        var area = document.createElement('textarea');
+        area.value = texto;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.top = '-1000px';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+
+        try {
+          document.execCommand('copy') ? resolver() : rechazar();
+        } catch (e) {
+          rechazar(e);
+        } finally {
+          document.body.removeChild(area);
+        }
+      });
+    }
+
+    function marcar(boton, clase, texto) {
+      boton.className = 'btn-copiar ' + clase;
+      boton.textContent = texto;
+      clearTimeout(boton._temporizador);
+      boton._temporizador = setTimeout(function () {
+        boton.className = 'btn-copiar';
+        boton.textContent = '📋 Copiar';
+      }, 1800);
+    }
+
+    document.querySelectorAll('pre > code').forEach(function (codigo, indice) {
+      var pre = codigo.parentNode;
+
+      var caja = document.createElement('div');
+      caja.className = 'bloque-codigo';
+      pre.parentNode.insertBefore(caja, pre);
+      caja.appendChild(pre);
+
+      var boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'btn-copiar';
+      boton.textContent = '📋 Copiar';
+      boton.setAttribute('aria-label', 'Copiar el bloque de código ' + (indice + 1));
+
+      boton.addEventListener('click', function () {
+        copiarTexto(codigo.innerText)
+          .then(function () { marcar(boton, 'ok', '✓ Copiado'); })
+          .catch(function () { marcar(boton, 'falla', '✕ Error'); });
+      });
+
+      caja.appendChild(boton);
+    });
+  })();
+
+</script>
+
+<script>
+  // ====================================================================
+  // BARRA FIJA: en qué ejercicio estoy y cuánto llevo leído.
+  // Se construye entera desde acá, sin tocar el HTML del documento.
+  // Vanilla puro, sin dependencias.
+  // ====================================================================
+  (function () {
+    'use strict';
+
+    var ETIQUETAS = {
+      prep:   { corta: 'Base', larga: 'De dónde partes',                   color: '#5b6b7c' },
+      ej1:    { corta: 'R1',   larga: 'Requisito 1 — Las cuatro pantallas', color: '#2f8f66' },
+      ej2:    { corta: 'R2',   larga: 'Requisito 2 — El inventario',        color: '#2a6fc9' },
+      ej3:    { corta: 'R3',   larga: 'Requisito 3 — La planilla',          color: '#c47a1b' },
+      ej4:    { corta: 'R4',   larga: 'Requisito 4 — El formulario en Vuex', color: '#7a4fc0' },
+      ej5:    { corta: 'R5',   larga: 'Requisito 5 — El panel',             color: '#b8384f' },
+      cierre: { corta: 'Fin',  larga: 'Cierre y rúbrica',                   color: '#33424f' }
+    };
+
+    var secciones = Array.prototype.slice.call(
+      document.querySelectorAll('section.ejercicio[id]')
+    );
+    if (!secciones.length) return;
+
+    /* ---------- Construcción de la barra ---------- */
+    var barra = document.createElement('div');
+    barra.className = 'barra-fija';
+
+    var progreso = document.createElement('div');
+    progreso.className = 'barra-progreso';
+    var relleno = document.createElement('i');
+    progreso.appendChild(relleno);
+
+    var cuerpo = document.createElement('div');
+    cuerpo.className = 'barra-cuerpo';
+
+    var marca = document.createElement('span');
+    marca.className = 'barra-marca';
+    marca.textContent = 'M7 · L3';
+
+    var actual = document.createElement('span');
+    actual.className = 'barra-actual';
+    actual.textContent = 'Actividad práctica · El Pañol';
+
+    var saltos = document.createElement('nav');
+    saltos.className = 'barra-saltos';
+    saltos.setAttribute('aria-label', 'Ir a un ejercicio');
+
+    var enlaces = secciones.map(function (seccion) {
+      var info = ETIQUETAS[seccion.id] || { corta: seccion.id, larga: seccion.id, color: '#34495e' };
+      var a = document.createElement('a');
+      a.href = '#' + seccion.id;
+      a.textContent = info.corta;
+      a.title = info.larga;
+      a.setAttribute('aria-label', info.larga);
+      a.style.setProperty('--acento-pill', info.color);
+      a._info = info;
+      saltos.appendChild(a);
+      return a;
+    });
+
+    var arriba = document.createElement('a');
+    arriba.href = '#';
+    arriba.className = 'arriba';
+    arriba.textContent = '↑';
+    arriba.title = 'Volver arriba';
+    arriba.setAttribute('aria-label', 'Volver arriba');
+    arriba.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    saltos.appendChild(arriba);
+
+    cuerpo.appendChild(marca);
+    cuerpo.appendChild(actual);
+    cuerpo.appendChild(saltos);
+    barra.appendChild(progreso);
+    barra.appendChild(cuerpo);
+    document.body.appendChild(barra);
+
+    /* ---------- Actualización al hacer scroll ---------- */
+    var pendiente = false;
+
+    function actualizar() {
+      pendiente = false;
+
+      // Progreso de lectura del documento completo
+      var alto = document.documentElement.scrollHeight - window.innerHeight;
+      var leido = alto > 0 ? (window.scrollY / alto) * 100 : 0;
+      relleno.style.width = Math.min(100, Math.max(0, leido)) + '%';
+
+      // Sección activa: la última cuyo borde superior ya pasó la barra
+      var limite = window.scrollY + (window.innerHeight * 0.28);
+      var activa = null;
+
+      for (var i = 0; i < secciones.length; i++) {
+        if (secciones[i].offsetTop <= limite) activa = i;
+      }
+
+      enlaces.forEach(function (a, i) {
+        var esta = (i === activa);
+        a.classList.toggle('activo', esta);
+        if (esta) a.setAttribute('aria-current', 'true');
+        else a.removeAttribute('aria-current');
+      });
+
+      actual.textContent = activa === null
+        ? 'Actividad práctica · El Pañol'
+        : enlaces[activa]._info.larga;
+    }
+
+    function alDesplazar() {
+      if (pendiente) return;
+      pendiente = true;
+      window.requestAnimationFrame(actualizar);
+    }
+
+    window.addEventListener('scroll', alDesplazar, { passive: true });
+    window.addEventListener('resize', alDesplazar, { passive: true });
+    actualizar();
+  })();
+
+</script>
+</body>
+</html>
