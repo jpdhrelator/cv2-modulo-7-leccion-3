@@ -4,6 +4,10 @@ import { getJwtSecret } from '../config.js';
 import ticketRoutes from './ticket.routes.js';
 import personaRoutes from './persona.routes.js';
 import itemRoutes from './item.routes.js';
+import canchaRoutes from './cancha.routes.js';
+import reservaRoutes from './reserva.routes.js';
+import equipoRoutes from './equipo.routes.js';
+import prestamoRoutes from './prestamo.routes.js';
 
 /* ==================================================================== */
 /* RUTAS LIBRES — mismos recursos, SIN autenticación                     */
@@ -68,7 +72,11 @@ router.get('/', (_req: Request, res: Response) => {
         equivalencias: {
             '/api/libre/tickets': '/api/tickets  (mismo recurso, este no pide token)',
             '/api/libre/personas': '/api/personas (mismo recurso, este no pide token)',
-            '/api/libre/items': '/api/items    (mismo recurso, este no pide token)'
+            '/api/libre/items': '/api/items    (mismo recurso, este no pide token)',
+            '/api/libre/canchas': '/api/canchas  (mismo recurso, este no pide token)',
+            '/api/libre/reservas': '/api/reservas (mismo recurso, este no pide token)',
+            '/api/libre/equipos': '/api/equipos  (mismo recurso, este no pide token)',
+            '/api/libre/prestamos': '/api/prestamos (mismo recurso, este no pide token)'
         },
         tickets: [
             'GET    /api/libre/tickets              → { datos, meta }',
@@ -90,10 +98,41 @@ router.get('/', (_req: Request, res: Response) => {
             'PATCH  /api/libre/personas/:id           → actualización parcial',
             'DELETE /api/libre/personas/:id           → 204 sin cuerpo'
         ],
+        canchas: [
+            'GET    /api/libre/canchas                → arreglo directo del catálogo',
+            'GET    /api/libre/canchas/:id            → la cancha directa',
+            'Sólo lectura: construir una cancha no es cosa de una aplicación web.'
+        ],
+        reservas: [
+            'GET    /api/libre/reservas               → { datos, meta }',
+            'GET    /api/libre/reservas/bloques       → horarios y estados para los <select>',
+            'GET    /api/libre/reservas/resumen       → estadísticas del recinto',
+            'GET    /api/libre/reservas/:id           → la reserva directa',
+            'POST   /api/libre/reservas               → 201 + cabecera Location',
+            'PUT    /api/libre/reservas/:id           → reemplazo total',
+            'PATCH  /api/libre/reservas/:id           → confirmar o cancelar',
+            'DELETE /api/libre/reservas/:id           → elimina'
+        ],
+        equipos: [
+            'GET    /api/libre/equipos                → catálogo con `disponibles` calculado',
+            'GET    /api/libre/equipos/categorias     → valores del selector',
+            'GET    /api/libre/equipos/:id            → el equipo directo',
+            'Sólo lectura: dar de alta un equipo es un trámite de inventario.'
+        ],
+        prestamos: [
+            'GET    /api/libre/prestamos              → { datos, meta }',
+            'GET    /api/libre/prestamos/opciones     → estados y categorías para los <select>',
+            'GET    /api/libre/prestamos/resumen      → estadísticas del pañol',
+            'GET    /api/libre/prestamos/:id          → el préstamo directo',
+            'POST   /api/libre/prestamos              → 201 + cabecera Location · 409 si no alcanza el stock',
+            'PUT    /api/libre/prestamos/:id          → reemplazo total',
+            'PATCH  /api/libre/prestamos/:id          → entregar o devolver',
+            'DELETE /api/libre/prestamos/:id          → elimina'
+        ],
         seConservan: {
             '400': 'Filtro con un valor no permitido',
             '404': 'El recurso no existe',
-            '409': 'Conflicto de estado (cerrar algo ya cerrado, RUT duplicado, eliminar a alguien activo)',
+            '409': 'Conflicto de estado (cerrar algo ya cerrado, RUT duplicado, eliminar a alguien activo, cancha ya tomada a esa hora, stock insuficiente en el pañol)',
             '422': 'Validación fallida, con detalle por campo en `errores`',
             '429': 'Demasiadas peticiones en /tickets/resumen, con cabecera Retry-After'
         },
@@ -113,5 +152,9 @@ router.use(inyectarCredencialDeInvitado);
 router.use('/tickets', ticketRoutes);
 router.use('/personas', personaRoutes);
 router.use('/items', itemRoutes);
+router.use('/canchas', canchaRoutes);
+router.use('/reservas', reservaRoutes);
+router.use('/equipos', equipoRoutes);
+router.use('/prestamos', prestamoRoutes);
 
 export default router;

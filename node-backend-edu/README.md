@@ -335,10 +335,15 @@ curl http://localhost:3001/api/libre          # índice de lo disponible
 | `/api/tickets` | `/api/libre/tickets` |
 | `/api/personas` | `/api/libre/personas` |
 | `/api/items` | `/api/libre/items` |
+| `/api/canchas` | `/api/libre/canchas` |
+| `/api/reservas` | `/api/libre/reservas` |
+| `/api/equipos` | `/api/libre/equipos` |
+| `/api/prestamos` | `/api/libre/prestamos` |
 
 Todos los verbos y sub-rutas se conservan: `/api/libre/tickets/resumen`,
 `/api/libre/tickets/:id/cerrar`, `/api/libre/tickets/:id/reabrir`,
-`/api/libre/personas/departamentos`, etc.
+`/api/libre/personas/departamentos`, `/api/libre/reservas/bloques`,
+`/api/libre/prestamos/resumen`, etc.
 
 ```bash
 # Crear un ticket sin ninguna cabecera de autorización
@@ -359,7 +364,7 @@ sigue en pie**, que es justamente lo que le da sentido a las *actions* de Vuex:
 | :--- | :--- |
 | **400** | Sí — filtro con un valor no permitido |
 | **404** | Sí — el recurso no existe |
-| **409** | Sí — cerrar algo ya cerrado, RUT duplicado, eliminar a alguien activo |
+| **409** | Sí — cerrar algo ya cerrado, RUT duplicado, eliminar a alguien activo, cancha ya tomada a esa hora, stock insuficiente |
 | **422** | Sí — validación fallida, con detalle **por campo** en `errores` |
 | **429** | Sí — más de 5 llamadas a `/tickets/resumen` en 30 s, con `Retry-After` |
 | **401** | **No** — no se pide credencial |
@@ -368,7 +373,8 @@ sigue en pie**, que es justamente lo que le da sentido a las *actions* de Vuex:
 > [!IMPORTANT]
 > Los datos son **los mismos**: una sola base en memoria. Si eliminas un ticket
 > desde `/api/libre/tickets/:id`, también desaparece de `/api/tickets/:id`.
-> Reinicia el servidor para volver a los 12 tickets y 12 personas de origen.
+> Reinicia el servidor para volver a los 12 tickets, 12 personas, 2 items,
+> 6 canchas, 14 reservas, 8 equipos y 15 préstamos de origen.
 
 ## Cómo está implementado
 
@@ -379,3 +385,407 @@ petición más adelante, encuentra un token válido y deja pasar.
 
 Ese invitado tiene rol `admin` a propósito: sin eso, `DELETE` seguiría
 devolviendo 403 y volveríamos a mezclar el tema de permisos con el de estado.
+
+---
+
+# ⚽ Recinto deportivo — Canchas y Reservas (Lección 3 · módulos de Vuex)
+
+Un par de recursos **relacionados**, agregados para practicar módulos de Vuex,
+Vue Router y axios sobre un CRUD sencillo con estadísticas.
+
+Son dos entidades a propósito. Una sola no justifica partir un store en módulos:
+se resuelve en un archivo y el alumno se queda pensando que los módulos son un
+capricho. Acá **una reserva no existe sin su cancha**, y esa dependencia es la
+que obliga a que los dos módulos se comuniquen.
+
+## 🏟 Canchas — catálogo de sólo lectura
+
+No hay `POST`, `PUT` ni `DELETE`: construir o demoler una cancha no es algo que
+se haga desde una aplicación web.
+
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/api/canchas` | Arreglo directo. Filtros `activa` y `superficie` |
+| `GET` | `/api/canchas/:id` | Una cancha |
+
+```jsonc
+{
+  "id": 1,
+  "nombre": "Cancha 1 · Techada",
+  "superficie": "pasto_sintetico",   // pasto_sintetico | pasto_natural | cemento
+  "jugadores": 7,                    // por lado: 5, 7 u 11
+  "valorHora": 32000,
+  "techada": true,
+  "activa": true
+}
+```
+
+Vienen **6 canchas**. La número 6 tiene `activa: false` — sirve para provocar el
+`422` al intentar reservarla.
+
+## 📅 Reservas — CRUD completo
+
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/api/reservas` | `{ datos, meta }` con filtros y paginación |
+| `GET` | `/api/reservas/bloques` | Horarios y estados válidos, para los `<select>` |
+| `GET` | `/api/reservas/resumen` | Estadísticas del recinto |
+| `GET` | `/api/reservas/:id` | Una reserva |
+| `POST` | `/api/reservas` | 🔒 `201` + cabecera `Location` |
+| `PUT` | `/api/reservas/:id` | 🔒 Reemplazo total |
+| `PATCH` | `/api/reservas/:id` | 🔒 Confirmar o cancelar |
+| `DELETE` | `/api/reservas/:id` | 🔒 Elimina. **No exige rol admin** |
+
+A diferencia de tickets y personas, el `DELETE` no pide rol `admin`: en la
+Lección 3 el tema es el estado en el cliente, no los permisos.
+
+### Forma de una reserva
+
+```jsonc
+{
+  "id": 1,
+  "codigo": "RES-0001",
+  "canchaId": 1,
+  "cliente": "Los Cracks del Barrio",
+  "telefono": "+56912345678",
+  "fecha": "2026-08-05",             // AAAA-MM-DD
+  "bloque": "20:00",                 // una hora exacta
+  "jugadores": 14,
+  "estado": "confirmada",            // pendiente | confirmada | cancelada
+  "comentario": "Piden pechera de color.",
+  "creadoEn": "2026-07-28T18:00:00.000Z",
+  "actualizadoEn": "2026-07-29T10:15:00.000Z",
+  "canchaNombre": "Cancha 1 · Techada"   // resuelto por el servidor
+}
+```
+
+> [!TIP]
+> `canchaNombre` viene resuelto a propósito. Así la **tabla** puede pintarse sin
+> cruzar el módulo de canchas, mientras que el **selector del formulario** sí lo
+> necesita. Esa diferencia enseña cuándo un módulo de Vuex debe pedirle datos a
+> otro y cuándo no hace falta.
+
+### Bloques horarios
+
+`16:00` · `17:00` · `18:00` · `19:00` · `20:00` · `21:00` · `22:00` · `23:00`
+
+Se sirven por HTTP en `GET /api/reservas/bloques` para que el `<select>` no los
+tenga escritos a mano.
+
+### Reglas de validación (responden **422** con detalle por campo)
+
+| Campo | Regla |
+| :--- | :--- |
+| `canchaId` | Obligatorio. La cancha debe **existir** y estar **activa** |
+| `cliente` | Obligatorio, 3 a 60 caracteres |
+| `telefono` | Obligatorio, formato `+56912345678` |
+| `fecha` | Obligatorio, `AAAA-MM-DD` y **fecha real** — `2026-02-31` se rechaza |
+| `bloque` | Uno de los ocho bloques |
+| `jugadores` | Entero entre 2 y 22 |
+| `comentario` | Opcional, máximo 200 caracteres |
+
+No se valida que la fecha sea futura, a propósito: sería razonable en un sistema
+real, pero dejaría este material inservible el día que las fechas de ejemplo
+queden en el pasado.
+
+### El conflicto de horario (**409**) — la razón de ser de este recurso
+
+```bash
+# Cancha 1, 5 de agosto, 20:00 ya está tomada por RES-0001
+curl -X POST http://localhost:3001/api/libre/reservas \
+  -H 'Content-Type: application/json' \
+  -d '{"canchaId":1,"cliente":"Los Nuevos","telefono":"+56911112222",
+       "fecha":"2026-08-05","bloque":"20:00","jugadores":10}'
+```
+
+```jsonc
+// 409 Conflict
+{
+  "message": "Cancha 1 · Techada ya está tomada el 2026-08-05 a las 20:00. Elige otro bloque u otra cancha.",
+  "conflicto": {
+    "codigo": "RES-0001",
+    "cliente": "Los Cracks del Barrio",
+    "fecha": "2026-08-05",
+    "bloque": "20:00",
+    "estado": "confirmada"
+  }
+}
+```
+
+> [!IMPORTANT]
+> **Los seis campos de esa petición son válidos.** Formato correcto, cancha
+> activa, fecha real, teléfono bien escrito. Ninguna validación de navegador
+> habría dicho nada — y el servidor la rechaza igual.
+>
+> Eso depende del estado del servidor en el instante exacto del envío. Es la
+> prueba de que la validación de cliente **nunca** reemplaza a la del servidor:
+> la del cliente es cortesía, la del servidor es la verdad.
+>
+> Por eso el `409` no se pinta debajo de un campo: no hay ningún campo culpable.
+> Va aparte, con el detalle de quién tiene tomado el bloque.
+
+**Cancelar libera el horario.** Una reserva `cancelada` no compite por su bloque:
+
+```bash
+curl -X PATCH http://localhost:3001/api/libre/reservas/1 \
+  -H 'Content-Type: application/json' -d '{"estado":"cancelada"}'
+# Ahora la Cancha 1 del 5 de agosto a las 20:00 vuelve a estar disponible
+```
+
+Otros `409` de este recurso: modificar una reserva cancelada (sólo admite un
+cambio de estado).
+
+### Parámetros de `GET /api/reservas`
+
+| Parámetro | Valores | Por defecto |
+| :--- | :--- | :--- |
+| `estado` | `pendiente` · `confirmada` · `cancelada` | — |
+| `canchaId` | Id de una cancha existente | — |
+| `fecha` | `AAAA-MM-DD`, fecha real | — |
+| `buscar` | Cliente, código, teléfono o nombre de cancha | — |
+| `orden` | `fecha` · `cliente` · `recientes` | `fecha` |
+| `pagina` | Número ≥ 1 | `1` |
+| `porPagina` | 1 a 50 | `6` |
+
+Un valor no permitido en `estado`, `canchaId` o `fecha` responde **400**.
+Devuelve además la cabecera `X-Total-Registros`.
+
+### Estadísticas — `GET /api/reservas/resumen`
+
+```jsonc
+{
+  "total": 14,
+  "porEstado": { "pendiente": 4, "confirmada": 8, "cancelada": 2 },
+  "porCancha": [
+    { "canchaId": 1, "nombre": "Cancha 1 · Techada", "reservas": 3, "ingreso": 96000 }
+  ],
+  "porBloque": { "16:00": 0, "18:00": 2, "20:00": 4 },
+  "bloqueMasPedido": "20:00",
+  "ingresoConfirmado": 333000,
+  "ocupacion": 6,
+  "diasConReservas": 5,
+  "generadoEn": "2026-08-04T21:37:04.744Z"
+}
+```
+
+> [!NOTE]
+> Estas cifras las calcula el servidor sobre **todas** las reservas. No las
+> confundas con lo que puedes derivar en un *getter* de Vuex: un getter sólo ve
+> lo que tienes cargado en el estado, que normalmente es una página de seis
+> resultados, no las catorce.
+>
+> Un getter que cuente `state.lista` y se presente como total del recinto no
+> produce un error: produce un número que se ve bien y miente. Eso es peor.
+>
+> **No le preguntes a la red lo que ya tienes en memoria, y no inventes con tu
+> memoria lo que sólo sabe la base de datos.**
+
+### Archivos
+
+| Archivo | Contenido |
+| :--- | :--- |
+| `src/models/reserva.model.ts` | Tipos, `BLOQUES`, `SUPERFICIES`, `ESTADOS_RESERVA` |
+| `src/routes/cancha.routes.ts` | Catálogo de sólo lectura |
+| `src/routes/reserva.routes.ts` | CRUD, validación, conflicto de horario y resumen |
+| `src/data/store.ts` | Las 6 canchas y las 14 reservas de origen |
+
+---
+
+# 🧰 El Pañol — Equipos y Préstamos (Lección 3 · actividad práctica)
+
+Recurso **gemelo** de canchas/reservas: misma estructura —un catálogo de sólo
+lectura del que depende un CRUD— y **reglas de negocio distintas**.
+
+Existe para la actividad que los estudiantes resuelven **después** de la clase
+en vivo del recinto. Si las reglas fueran las mismas, se resolvería copiando
+código sin entender nada.
+
+| | Recinto (clase en vivo) | Pañol (actividad) |
+| :--- | :--- | :--- |
+| El `409` es por | Colisión exacta | Capacidad agregada |
+| Depende de | Esa cancha, ese día, esa hora | La suma de todo lo que está fuera |
+| Es una pregunta de | ¿Está tomado? | ¿Cuántos quedan? |
+
+Un problema de sí-o-no contra un problema de cuántos-quedan. El alumno no puede
+transferir el código: tiene que transferir la idea.
+
+## 🧰 Equipos — catálogo de sólo lectura
+
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/api/equipos` | Arreglo directo. Filtros `categoria`, `operativo`, `conStock` |
+| `GET` | `/api/equipos/categorias` | Valores del selector |
+| `GET` | `/api/equipos/:id` | Un equipo |
+
+```jsonc
+{
+  "id": 1,
+  "nombre": "Notebook Lenovo ThinkPad",
+  "categoria": "computacion",   // computacion | audiovisual | redes | medicion | mobiliario
+  "marca": "Lenovo",
+  "stockTotal": 12,             // unidades que EXISTEN
+  "valorUnitario": 620000,
+  "operativo": true,            // si es false, no se puede prestar
+
+  // Estos dos NO están guardados: se calculan en cada consulta.
+  "comprometidas": 9,           // unidades fuera del pañol ahora mismo
+  "disponibles": 3              // stockTotal - comprometidas
+}
+```
+
+> [!IMPORTANT]
+> El cálculo de `disponibles` **tiene que vivir en el servidor**. El navegador de
+> un usuario no conoce los préstamos que están pidiendo los demás en este mismo
+> instante: puede mostrar el número que le dieron, pero no puede garantizar que
+> siga siendo cierto medio segundo después.
+
+Vienen **8 equipos**. El número 8 (Osciloscopio) está `operativo: false`, para
+provocar el `422`.
+
+## 📋 Préstamos — CRUD completo
+
+| Método | Ruta | Descripción |
+| :--- | :--- | :--- |
+| `GET` | `/api/prestamos` | `{ datos, meta }` con filtros y paginación |
+| `GET` | `/api/prestamos/opciones` | Estados y categorías para los `<select>` |
+| `GET` | `/api/prestamos/resumen` | Estadísticas del pañol |
+| `GET` | `/api/prestamos/:id` | Un préstamo |
+| `POST` | `/api/prestamos` | 🔒 `201` + cabecera `Location` |
+| `PUT` | `/api/prestamos/:id` | 🔒 Reemplazo total |
+| `PATCH` | `/api/prestamos/:id` | 🔒 Entregar o devolver |
+| `DELETE` | `/api/prestamos/:id` | 🔒 Elimina. No exige rol admin |
+
+### Forma de un préstamo
+
+```jsonc
+{
+  "id": 4,
+  "codigo": "PR-0004",
+  "equipoId": 3,
+  "solicitante": "Marcelo Vera",
+  "area": "Registro Audiovisual",
+  "cantidad": 2,
+  "fechaRetiro": "2026-07-20",
+  "fechaDevolucion": "2026-07-31",
+  "estado": "entregado",             // pendiente | entregado | devuelto
+  "observacion": "Cobertura de la ceremonia.",
+
+  // Calculados por el servidor en cada consulta:
+  "equipoNombre": "Cámara de video",
+  "equipoCategoria": "audiovisual",
+  "atrasado": true,                  // entregado Y con la fecha vencida
+  "diasAtraso": 4,
+  "valorComprometido": 1780000       // valorUnitario x cantidad
+}
+```
+
+`atrasado` no se guarda: se deduce comparando con el día de hoy según el
+servidor. Guardarlo obligaría a tener un proceso que recorra la base todas las
+noches cambiando estados.
+
+### Los tres estados y el stock
+
+| Estado | Qué pasó | ¿Ocupa unidades? |
+| :--- | :--- | :--- |
+| `pendiente` | Reservado, todavía no lo retiran | **Sí** |
+| `entregado` | Está en manos del solicitante | **Sí** |
+| `devuelto` | Volvió al pañol | **No** — libera stock |
+
+### Reglas de validación (responden **422** con detalle por campo)
+
+| Campo | Regla |
+| :--- | :--- |
+| `equipoId` | Obligatorio. Debe existir **y estar operativo** |
+| `solicitante` | Obligatorio, 3 a 60 caracteres |
+| `area` | Obligatorio, mínimo 3 caracteres |
+| `cantidad` | Entero entre 1 y 20 |
+| `fechaRetiro` | Obligatorio, `AAAA-MM-DD` y fecha real |
+| `fechaDevolucion` | Obligatorio, y **nunca anterior al retiro** |
+| `observacion` | Opcional, máximo 200 caracteres |
+
+La regla de las fechas cruza **dos campos**, y sólo se evalúa si las dos son
+válidas por separado: no tiene sentido decir "la devolución es anterior al
+retiro" cuando el retiro ni siquiera es una fecha.
+
+El equipo en mantención devuelve **422 y no 409**, a propósito: el arreglo es
+elegir otra opción del selector, así que el mensaje va debajo del `<select>`.
+
+### El conflicto por stock (**409**)
+
+```bash
+# Hay 3 cámaras y las 3 están fuera
+curl -X POST http://localhost:3001/api/libre/prestamos \
+  -H 'Content-Type: application/json' \
+  -d '{"equipoId":3,"solicitante":"Curso de Cine","area":"Audiovisual",
+       "cantidad":1,"fechaRetiro":"2026-08-10","fechaDevolucion":"2026-08-15"}'
+```
+
+```jsonc
+// 409 Conflict
+{
+  "message": "No hay unidades suficientes de Cámara de video. Pediste 1 y no queda ninguna.",
+  "stock": {
+    "equipo": "Cámara de video",
+    "solicitadas": 1,
+    "disponibles": 0,
+    "comprometidas": 3,
+    "stockTotal": 3
+  }
+}
+```
+
+> [!TIP]
+> El servidor no sólo dice que no: **dice cuántas hay**. Con esos números la
+> interfaz puede ofrecer algo útil ("quedan 3, ¿las pides?") en vez de un error
+> seco.
+
+**Devolver libera el stock:**
+
+```bash
+curl -X PATCH http://localhost:3001/api/libre/prestamos/4 \
+  -H 'Content-Type: application/json' -d '{"estado":"devuelto"}'
+# Ahora sí hay cámaras disponibles
+```
+
+Un préstamo `devuelto` está **cerrado** y no admite ningún cambio — ni siquiera
+reabrirse. Es una diferencia deliberada con las reservas, donde cancelar sí se
+puede deshacer. Si el equipo vuelve a salir, es un préstamo nuevo.
+
+Al editar, el cálculo de stock **excluye al propio préstamo**. Sin eso, subir de
+2 a 3 unidades compararía contra un stock que ya descuenta las 2 que ese mismo
+préstamo tiene tomadas, y nunca alcanzaría.
+
+### Parámetros de `GET /api/prestamos`
+
+| Parámetro | Valores | Por defecto |
+| :--- | :--- | :--- |
+| `estado` | `pendiente` · `entregado` · `devuelto` | — |
+| `equipoId` | Id de un equipo existente | — |
+| `categoria` | Una de las cinco categorías | — |
+| `atrasados` | `true` · `false` | — |
+| `buscar` | Solicitante, área, código o equipo | — |
+| `orden` | `recientes` · `solicitante` · `devolucion` · `cantidad` | `recientes` |
+| `pagina` · `porPagina` | Números. `porPagina` máximo 50 | `1` · `6` |
+
+### Estadísticas — `GET /api/prestamos/resumen`
+
+Trae `total`, `porEstado`, `porEquipo` (con `usoPorcentaje`), `porCategoria`,
+`unidadesFuera`, `atrasados`, `valorEnCirculacion` y `equipoMasPedido`.
+
+### Datos precargados
+
+**15 préstamos** sobre 8 equipos. Dos detalles preparados a propósito:
+
+- Las **3 cámaras** están todas fuera → cualquier petición de cámara da `409` de
+  inmediato, sin tener que preparar nada.
+- Hay **2 préstamos atrasados** (PR-0004 y PR-0008) para que el filtro
+  `atrasados=true` y la cifra del panel tengan algo que mostrar.
+
+### Archivos
+
+| Archivo | Contenido |
+| :--- | :--- |
+| `src/models/prestamo.model.ts` | Tipos, `CATEGORIAS_EQUIPO`, `ESTADOS_PRESTAMO`, `ESTADOS_VIVOS` |
+| `src/routes/equipo.routes.ts` | Catálogo y el cálculo de disponibilidad |
+| `src/routes/prestamo.routes.ts` | CRUD, validación, conflicto de stock y resumen |
+| `src/data/store.ts` | Los 8 equipos y los 15 préstamos de origen |
